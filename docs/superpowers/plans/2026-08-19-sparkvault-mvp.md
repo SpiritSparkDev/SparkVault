@@ -146,6 +146,7 @@ obj/
 `src/SparkVault.App/App.xaml.cs`:
 ```csharp
 using System.Windows;
+using Application = System.Windows.Application;
 
 namespace SparkVault.App;
 
@@ -153,6 +154,8 @@ public partial class App : Application
 {
 }
 ```
+
+Note: the project has both `UseWPF` and `UseWindowsForms` enabled (the latter is needed for the tray icon in Task 10), so `Application` is ambiguous between `System.Windows.Application` and `System.Windows.Forms.Application` without this alias.
 
 - [ ] **Step 5: Create minimal `MainWindow.xaml` / `MainWindow.xaml.cs`**
 
@@ -354,12 +357,15 @@ public static class ExclusionMatcher
 {
     public static bool IsExcluded(string relativePath, IEnumerable<string> patterns)
     {
+        var normalizedPath = relativePath.Replace('\\', '/');
+
         foreach (var pattern in patterns)
         {
             if (string.IsNullOrWhiteSpace(pattern))
                 continue;
 
-            if (FileSystemName.MatchesSimpleExpression(pattern, relativePath))
+            var normalizedPattern = pattern.Replace('\\', '/');
+            if (FileSystemName.MatchesSimpleExpression(normalizedPattern, normalizedPath))
                 return true;
         }
 
@@ -367,6 +373,12 @@ public static class ExclusionMatcher
     }
 }
 ```
+
+**Why the normalization:** `FileSystemName.MatchesSimpleExpression` treats a backslash in the
+*pattern* as an escape character, not a literal separator — the pattern `cache\*` matches the
+literal text `cache*`, not `cache` + separator + wildcard. Forward slashes have no special
+meaning to it. Normalizing both sides to `/` before matching sidesteps the escape behavior
+while still accepting the natural Windows-style `cache\*` patterns a user types in the UI.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
