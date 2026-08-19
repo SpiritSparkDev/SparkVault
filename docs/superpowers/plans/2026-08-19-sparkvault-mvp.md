@@ -1894,6 +1894,7 @@ git commit -m "Wire composition root, SQLite/log setup, and tray icon"
 ```csharp
 using System.Collections.ObjectModel;
 using System.Windows;
+using MessageBox = System.Windows.MessageBox;
 using SparkVault.Core;
 
 namespace SparkVault.App;
@@ -2099,6 +2100,7 @@ git commit -m "Add main window job list"
 
 ```csharp
 using System.Windows;
+using MessageBox = System.Windows.MessageBox;
 using SparkVault.Core;
 
 namespace SparkVault.App;
