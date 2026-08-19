@@ -106,7 +106,7 @@ public partial class MainWindow : Window
 
         try
         {
-            await App.Runner.RunAsync(job, new LocalTarget(job.DestinationPath), progress, CancellationToken.None);
+            await App.Runner.RunAsync(job, App.CreateTarget(job), progress, CancellationToken.None);
         }
         finally
         {

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Data.Sqlite;
 
 namespace SparkVault.Core;
@@ -85,14 +86,19 @@ public sealed class RunRepository
         command.Parameters.AddWithValue("$error", (object?)run.ErrorMessage ?? DBNull.Value);
     }
 
+    // RoundtripKind keeps the Kind=Utc that ToString("O") wrote; plain Parse would
+    // silently shift the value to local time and stamp it Kind=Local.
+    private static DateTime ParseRoundtrip(string value) =>
+        DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+
     private static BackupRun ReadRun(SqliteDataReader reader)
     {
         return new BackupRun
         {
             Id = reader.GetInt32(reader.GetOrdinal("Id")),
             JobId = reader.GetInt32(reader.GetOrdinal("JobId")),
-            StartedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("StartedAt"))),
-            EndedAt = reader.IsDBNull(reader.GetOrdinal("EndedAt")) ? null : DateTime.Parse(reader.GetString(reader.GetOrdinal("EndedAt"))),
+            StartedAt = ParseRoundtrip(reader.GetString(reader.GetOrdinal("StartedAt"))),
+            EndedAt = reader.IsDBNull(reader.GetOrdinal("EndedAt")) ? null : ParseRoundtrip(reader.GetString(reader.GetOrdinal("EndedAt"))),
             Status = Enum.Parse<RunStatus>(reader.GetString(reader.GetOrdinal("Status"))),
             FileCount = reader.GetInt32(reader.GetOrdinal("FileCount")),
             TotalBytes = reader.GetInt64(reader.GetOrdinal("TotalBytes")),

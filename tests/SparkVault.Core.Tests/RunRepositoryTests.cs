@@ -69,6 +69,35 @@ public class RunRepositoryTests
     }
 
     [Fact]
+    public void RoundTrip_PreservesUtcKindAndInstant()
+    {
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var jobRepo = new JobRepository(connectionString);
+            var jobId = jobRepo.Add(new BackupJob { Name = "A", SourcePath = "C:\\a", DestinationPath = "D:\\a" });
+
+            var startedAt = DateTime.UtcNow;
+            var runRepo = new RunRepository(connectionString);
+            var run = new BackupRun { JobId = jobId, StartedAt = startedAt, Status = RunStatus.Success };
+            run.Id = runRepo.Add(run);
+            run.EndedAt = startedAt.AddMinutes(1);
+            runRepo.Update(run);
+
+            var loaded = runRepo.GetLatestByJobId(jobId)!;
+
+            Assert.Equal(DateTimeKind.Utc, loaded.StartedAt.Kind);
+            Assert.Equal(DateTimeKind.Utc, loaded.EndedAt!.Value.Kind);
+            Assert.Equal(startedAt, loaded.StartedAt, TimeSpan.FromSeconds(1));
+        }
+        finally
+        {
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
+
+    [Fact]
     public void GetLatestByJobId_ReturnsNullWhenNoRuns()
     {
         var connectionString = NewTempDbConnectionString(out var dbPath);

@@ -39,7 +39,8 @@ public class BackgroundSchedulerTests
             await using var scheduler = new BackgroundScheduler(
                 jobRepo, runRepo, runner,
                 job => new LocalTarget(job.DestinationPath),
-                pollInterval: TimeSpan.FromMilliseconds(50));
+                pollInterval: TimeSpan.FromMilliseconds(50),
+                Log.Logger);
 
             await Task.Delay(TimeSpan.FromMilliseconds(400));
 

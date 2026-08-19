@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using MessageBox = System.Windows.MessageBox;
 using SparkVault.Core;
@@ -77,6 +78,18 @@ public partial class JobEditorWindow : Window
             string.IsNullOrWhiteSpace(DestinationPathBox.Text))
         {
             MessageBox.Show(this, "Name, Quellpfad und Zielpfad sind Pflichtfelder.", "SparkVault",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        // Destination inside the source makes every run re-scan its own output.
+        var fullSource = Path.GetFullPath(SourcePathBox.Text.Trim());
+        var fullDest = Path.GetFullPath(DestinationPathBox.Text.Trim());
+        var sourcePrefix = fullSource.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        if (fullDest.Equals(fullSource, StringComparison.OrdinalIgnoreCase) ||
+            fullDest.StartsWith(sourcePrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            MessageBox.Show(this, "Der Zielpfad darf nicht innerhalb des Quellpfads liegen.", "SparkVault",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
