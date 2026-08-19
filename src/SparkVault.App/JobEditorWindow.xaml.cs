@@ -119,7 +119,7 @@ public partial class JobEditorWindow : Window
             SourcePath = SourcePathBox.Text.Trim(),
             DestinationPath = DestinationPathBox.Text.Trim(),
             ExcludePatterns = ExcludePatternsBox.Text
-                .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .ToList(),
             ScheduleType = scheduleType,
             IntervalHours = intervalHours,
