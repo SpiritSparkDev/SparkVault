@@ -1,0 +1,8 @@
+<Window x:Class="SparkVault.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SparkVault" Height="450" Width="700">
+    <Grid>
+        <TextBlock Text="SparkVault" FontSize="20" Margin="16" />
+    </Grid>
+</Window>
