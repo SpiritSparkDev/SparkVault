@@ -54,8 +54,8 @@ public partial class App : Application
         menu.Items.Add("Beenden", null, (_, _) => Shutdown());
         _trayIcon.ContextMenuStrip = menu;
 
-        Runner.RunStarted += job => Dispatcher.Invoke(() => SetTrayStatus(running: true, job.Name));
-        Runner.RunCompleted += (job, status) => Dispatcher.Invoke(() => SetTrayStatus(running: false, job.Name, status));
+        Runner.RunStarted += job => Dispatcher.BeginInvoke(() => SetTrayStatus(running: true, job.Name));
+        Runner.RunCompleted += (job, status) => Dispatcher.BeginInvoke(() => SetTrayStatus(running: false, job.Name, status));
     }
 
     private void SetTrayStatus(bool running, string jobName, RunStatus? status = null)
