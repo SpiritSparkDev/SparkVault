@@ -28,6 +28,13 @@ Brainstorming geklärt:
 
 App-Titel: **SparkVault**.
 
+**Nachtrag:** Scheduler wurde nach initialem Review in den MVP-Scope aufgenommen
+(siehe Abschnitt 3). Umsetzung per In-Process-Timer (`System.Threading.PeriodicTimer`,
+stdlib) statt Quartz.NET – die Tray-App läuft durch den Autostart ohnehin
+durchgehend, das deckt den Scheduling-Bedarf im MVP ohne zusätzliche Abhängigkeit.
+Bekannte Einschränkung: Ist die App nicht gestartet (z. B. abgemeldet), verfällt ein
+fälliger Lauf ersatzlos bis zum nächsten Start – kein Nachholen verpasster Läufe im MVP.
+
 ## 3. MVP-Funktionsumfang
 
 **Drin:**
@@ -36,6 +43,10 @@ App-Titel: **SparkVault**.
 - Nur Vollbackup (kein inkrementell/differenziell).
 - Nur Ziel-Typ `Local` (lokaler Pfad oder UNC-Netzlaufwerk).
 - Manueller Start eines Jobs per UI.
+- Zeitgesteuerte Ausführung: Intervall (z. B. alle N Stunden) oder feste Uhrzeit
+  (täglich um HH:mm), je Job konfigurierbar, per In-Process-Timer solange die
+  Tray-App läuft. Kein separater Systemstart-Trigger nötig (Tray-App startet
+  bereits per Autostart) und kein Nachholen verpasster Läufe im MVP.
 - Fortschrittsanzeige während des Laufs.
 - Log je Lauf in SQLite (Start, Ende, Status, Dateianzahl, Datenmenge, Fehler).
 - Tray-Icon mit Statusanzeige (idle / läuft / Fehler) und Schnellzugriff (Jetzt
@@ -45,7 +56,8 @@ App-Titel: **SparkVault**.
   halbfertiges Backup als "gültig" zurück.
 
 **Draußen (spätere Phasen laut Roadmap im Referenzdokument):**
-- Zeitplan/Scheduler → v0.2
+- Nachholen verpasster Läufe, Trigger "bei Systemstart/Anmeldung" unabhängig von
+  Autostart, Cron-artige komplexe Zeitpläne → erst falls MVP-Scheduler nicht reicht
 - FTP/SFTP, S3 → v0.2 / v0.3
 - Inkrementell/Differenziell → v0.4
 - Komprimierung/Verschlüsselung → v0.4
@@ -59,7 +71,9 @@ App-Titel: **SparkVault**.
 ```
 Tray-App + Hauptfenster (WPF)
         │
-   Job-Engine          ← führt Jobs manuell aus (kein Scheduler im MVP)
+   Scheduler (PeriodicTimer)  ← prüft fällige Jobs im Hintergrund
+        │
+   Job-Engine          ← führt Job aus (ausgelöst manuell oder vom Scheduler)
         │
    Backup-Core          ← Dateiscan, Vollbackup-Kopie
         │
@@ -91,6 +105,8 @@ Job-Engine oder Backup-Core anzufassen.
 - Id, Name
 - Quellpfad, Ausschlussregeln (Dateitypen/Ordner/Muster – einfache Glob-Liste im MVP)
 - Zielpfad (lokal/UNC)
+- Zeitplan (optional): Typ `Intervall` (Stunden) oder `TäglichUmUhrzeit` (HH:mm),
+  `null`/deaktiviert = rein manuell
 
 **BackupTarget**
 - Typ: im MVP nur `Local`
@@ -105,7 +121,9 @@ Persistenz: SQLite (`Microsoft.Data.Sqlite`), eine lokale Datei unter
 
 ## 6. Ablauf eines Backup-Laufs
 
-1. Nutzer startet Job manuell über Tray-Icon oder Hauptfenster.
+1. Job wird ausgelöst: entweder Nutzer startet manuell über Tray-Icon/Hauptfenster,
+   oder der Scheduler erkennt einen fälligen Job (Intervall abgelaufen/Uhrzeit
+   erreicht) und startet ihn selbst.
 2. Backup-Core scannt Quellpfad, wendet Ausschlussregeln an, ermittelt zu
    kopierende Dateien (MVP: immer Vollbackup, kein Änderungsvergleich).
 3. Für jede Datei: `LocalTarget.UploadAsync()` kopiert unter temporärem Namen,
@@ -128,11 +146,11 @@ Persistenz: SQLite (`Microsoft.Data.Sqlite`), eine lokale Datei unter
 
 - **Tray-Icon**: Status (idle/läuft/Fehler), Kontextmenü (Jetzt sichern je Job,
   Hauptfenster öffnen, Beenden).
-- **Hauptfenster**: Job-Liste (Name, letzter Lauf, Status), Job-Editor (Name,
-  Quellpfad, Ausschlussregeln, Zielpfad – kein Wizard nötig im MVP, einfaches
-  Formular reicht), Log-Ansicht je Job.
+- **Hauptfenster**: Job-Liste (Name, letzter Lauf, nächster geplanter Lauf, Status),
+  Job-Editor (Name, Quellpfad, Ausschlussregeln, Zielpfad, Zeitplan – kein Wizard
+  nötig im MVP, einfaches Formular reicht), Log-Ansicht je Job.
 
-Kein Wizard, keine Zeitplan-Konfiguration, keine Restore-Ansicht im MVP.
+Kein Wizard, keine Restore-Ansicht im MVP.
 
 ## 9. Testkonzept
 
@@ -140,6 +158,8 @@ Kein Wizard, keine Zeitplan-Konfiguration, keine Restore-Ansicht im MVP.
 - Integrationstest `LocalTarget`: Kopie in Testverzeichnis, Verifikation.
 - Abbruch-Test: Kopiervorgang während Lauf abbrechen (CancellationToken), prüfen
   dass Ziel keine als "fertig" markierte Halbkopie enthält.
+- Scheduler-Test: Fälligkeitsberechnung (Intervall/Uhrzeit) unit-testen, ohne echte
+  Wartezeit (Uhrzeit injizierbar/mockbar).
 
 ## 10. Referenz
 
