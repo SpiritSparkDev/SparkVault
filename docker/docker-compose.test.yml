@@ -1,0 +1,14 @@
+services:
+  sparkvault-test-ftp:
+    image: garethflowers/ftp-server:latest
+    environment:
+      FTP_USER: testuser
+      FTP_PASS: testpass
+    ports:
+      - "2121:21"
+      - "40000-40009:40000-40009"
+  sparkvault-test-sftp:
+    image: atmoz/sftp:latest
+    command: testuser:testpass:::upload
+    ports:
+      - "2222:22"
