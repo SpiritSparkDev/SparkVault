@@ -21,61 +21,36 @@ public sealed class BackupRunner
         _logger = logger;
     }
 
-    public async Task<BackupRun> RunAsync(BackupJob job, IBackupTarget target, IProgress<TransferProgress>? progress, CancellationToken ct)
+    public async Task<IReadOnlyList<BackupRun>> RunAsync(BackupJob job, IProgress<TransferProgress>? progress, CancellationToken ct)
     {
         RunStarted?.Invoke(job);
-        var run = new BackupRun { JobId = job.Id, StartedAt = DateTime.UtcNow, Status = RunStatus.Failed };
-
+        var runGroupId = Guid.NewGuid();
+        var results = new List<BackupRun>();
         var lockHeld = false;
+
         try
         {
+            await _runLock.WaitAsync(ct);
+            lockHeld = true;
+
+            IReadOnlyList<BackupFile> files;
             try
             {
-                await _runLock.WaitAsync(ct);
-                lockHeld = true;
-
-                run.Id = _runRepository.Add(run);
-
-                if (!await target.TestConnectionAsync(ct))
-                    throw new IOException($"Zielpfad nicht erreichbar: {job.Name}");
-
-                var files = FileScanner.Scan(job.SourcePath, job.ExcludePatterns);
-                long totalBytes = files.Sum(f => f.Size);
-                int done = 0;
-                long bytesDone = 0;
-
-                foreach (var file in files)
-                {
-                    ct.ThrowIfCancellationRequested();
-                    await target.UploadAsync(file, progress, ct);
-                    done++;
-                    bytesDone += file.Size;
-                    progress?.Report(new TransferProgress(done, files.Count, bytesDone, totalBytes));
-                }
-
-                run.Status = RunStatus.Success;
-                run.FileCount = files.Count;
-                run.TotalBytes = totalBytes;
-                _logger.Information("Job {JobName} completed: {FileCount} files, {TotalBytes} bytes", job.Name, files.Count, totalBytes);
-            }
-            catch (OperationCanceledException)
-            {
-                run.Status = RunStatus.Cancelled;
-                _logger.Warning("Job {JobName} was cancelled", job.Name);
+                files = FileScanner.Scan(job.SourcePath, job.ExcludePatterns);
             }
             catch (Exception ex)
             {
-                run.Status = RunStatus.Failed;
-                run.ErrorMessage = ex.Message;
-                _logger.Error(ex, "Job {JobName} failed", job.Name);
+                // Source itself unreadable: still record one failed run per target, so the
+                // log shows every target was attempted-and-failed rather than silently empty.
+                foreach (var targetConfig in job.Targets)
+                    results.Add(RecordImmediateFailure(job, targetConfig, runGroupId, ex.Message));
+
+                RunCompleted?.Invoke(job, RunStatus.Failed);
+                return results;
             }
-            finally
-            {
-                run.EndedAt = DateTime.UtcNow;
-                if (run.Id != 0)
-                    _runRepository.Update(run);
-                RunCompleted?.Invoke(job, run.Status);
-            }
+
+            foreach (var targetConfig in job.Targets)
+                results.Add(await RunForTargetAsync(job, targetConfig, runGroupId, files, progress, ct));
         }
         finally
         {
@@ -83,6 +58,100 @@ public sealed class BackupRunner
                 _runLock.Release();
         }
 
+        var overallStatus = results.Count > 0 && results.All(r => r.Status == RunStatus.Success)
+            ? RunStatus.Success
+            : RunStatus.Failed;
+        RunCompleted?.Invoke(job, overallStatus);
+
+        return results;
+    }
+
+    private async Task<BackupRun> RunForTargetAsync(
+        BackupJob job, BackupTarget targetConfig, Guid runGroupId, IReadOnlyList<BackupFile> files,
+        IProgress<TransferProgress>? progress, CancellationToken ct)
+    {
+        var run = new BackupRun
+        {
+            JobId = job.Id,
+            TargetId = targetConfig.Id,
+            RunGroupId = runGroupId,
+            StartedAt = DateTime.UtcNow,
+            Status = RunStatus.Failed,
+        };
+
+        int done = 0;
+        long bytesDone = 0;
+
+        try
+        {
+            run.Id = _runRepository.Add(run);
+
+            await using var target = TargetFactory.Create(targetConfig);
+
+            if (!await target.TestConnectionAsync(ct))
+                throw new IOException($"Ziel nicht erreichbar: {DescribeTarget(targetConfig)}");
+
+            long totalBytes = files.Sum(f => f.Size);
+
+            foreach (var file in files)
+            {
+                ct.ThrowIfCancellationRequested();
+                await target.UploadAsync(file, progress, ct);
+                done++;
+                bytesDone += file.Size;
+                progress?.Report(new TransferProgress(done, files.Count, bytesDone, totalBytes));
+            }
+
+            run.Status = RunStatus.Success;
+            _logger.Information("Job {JobName} -> {Target} completed: {FileCount} files, {TotalBytes} bytes",
+                job.Name, DescribeTarget(targetConfig), done, bytesDone);
+        }
+        catch (OperationCanceledException)
+        {
+            run.Status = RunStatus.Cancelled;
+            _logger.Warning("Job {JobName} -> {Target} was cancelled", job.Name, DescribeTarget(targetConfig));
+        }
+        catch (Exception ex)
+        {
+            run.Status = RunStatus.Failed;
+            run.ErrorMessage = ex.Message;
+            _logger.Error(ex, "Job {JobName} -> {Target} failed", job.Name, DescribeTarget(targetConfig));
+        }
+        finally
+        {
+            run.EndedAt = DateTime.UtcNow;
+            run.FileCount = done;
+            run.TotalBytes = bytesDone;
+            if (run.Id != 0)
+                _runRepository.Update(run);
+        }
+
         return run;
     }
+
+    private BackupRun RecordImmediateFailure(BackupJob job, BackupTarget targetConfig, Guid runGroupId, string errorMessage)
+    {
+        var run = new BackupRun
+        {
+            JobId = job.Id,
+            TargetId = targetConfig.Id,
+            RunGroupId = runGroupId,
+            StartedAt = DateTime.UtcNow,
+            EndedAt = DateTime.UtcNow,
+            Status = RunStatus.Failed,
+            ErrorMessage = errorMessage,
+        };
+        run.Id = _runRepository.Add(run);
+        _runRepository.Update(run);
+        _logger.Error("Job {JobName} -> {Target} failed: {Error}", job.Name, DescribeTarget(targetConfig), errorMessage);
+        return run;
+    }
+
+    private static string DescribeTarget(BackupTarget target) => target.Type switch
+    {
+        TargetType.Local => $"Local:{target.DestinationPath}",
+        TargetType.Ftp => $"FTP:{target.Host}",
+        TargetType.Sftp => $"SFTP:{target.Host}",
+        _ => target.Type.ToString(),
+    };
 }
