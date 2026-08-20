@@ -2,16 +2,44 @@ namespace SparkVault.Core;
 
 public enum ScheduleType { None, Interval, DailyAt }
 
+public enum TargetType { Local, Ftp, Sftp }
+
+public enum FtpEncryption { None, Explicit, Implicit }
+
+public sealed class BackupTarget
+{
+    public int Id { get; set; }
+    public int JobId { get; set; }
+    public TargetType Type { get; set; }
+
+    // Local
+    public string? DestinationPath { get; set; }
+
+    // Ftp / Sftp shared
+    public string? Host { get; set; }
+    public int? Port { get; set; }
+    public string? Username { get; set; }
+    public string? EncryptedPassword { get; set; }
+    public string? RemotePath { get; set; }
+
+    // Ftp only
+    public FtpEncryption? EncryptionMode { get; set; }
+
+    // Sftp only
+    public string? PrivateKeyPath { get; set; }
+    public string? EncryptedKeyPassphrase { get; set; }
+}
+
 public sealed class BackupJob
 {
     public int Id { get; set; }
     public string Name { get; set; } = "";
     public string SourcePath { get; set; } = "";
-    public string DestinationPath { get; set; } = "";
     public List<string> ExcludePatterns { get; set; } = new();
     public ScheduleType ScheduleType { get; set; } = ScheduleType.None;
     public int? IntervalHours { get; set; }
     public TimeOnly? DailyAtTime { get; set; }
+    public List<BackupTarget> Targets { get; set; } = new();
 }
 
 public enum RunStatus { Success, Failed, Cancelled }
@@ -20,6 +48,8 @@ public sealed class BackupRun
 {
     public int Id { get; set; }
     public int JobId { get; set; }
+    public int TargetId { get; set; }
+    public Guid RunGroupId { get; set; }
     public DateTime StartedAt { get; set; }
     public DateTime? EndedAt { get; set; }
     public RunStatus Status { get; set; }
