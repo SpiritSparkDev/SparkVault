@@ -5,51 +5,78 @@ namespace SparkVault.Core;
 public sealed class JobRepository
 {
     private readonly string _connectionString;
+    private readonly BackupTargetRepository _targetRepository;
 
     public JobRepository(string connectionString)
     {
         _connectionString = SparkVaultDatabase.DisablePooling(connectionString);
+        _targetRepository = new BackupTargetRepository(connectionString);
     }
 
     public int Add(BackupJob job)
     {
-        using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
+        using (var connection = new SqliteConnection(_connectionString))
+        {
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText = """
+                INSERT INTO Jobs (Name, SourcePath, ExcludePatterns, ScheduleType, IntervalHours, DailyAtTime)
+                VALUES ($name, $source, $exclude, $scheduleType, $intervalHours, $dailyAtTime);
+                SELECT last_insert_rowid();
+                """;
+            BindJobParameters(command, job);
+            job.Id = Convert.ToInt32((long)command.ExecuteScalar()!);
+        }
 
-        var command = connection.CreateCommand();
-        command.CommandText = """
-            INSERT INTO Jobs (Name, SourcePath, ExcludePatterns, ScheduleType, IntervalHours, DailyAtTime)
-            VALUES ($name, $source, $exclude, $scheduleType, $intervalHours, $dailyAtTime);
-            SELECT last_insert_rowid();
-            """;
-        BindJobParameters(command, job);
+        foreach (var target in job.Targets)
+        {
+            target.JobId = job.Id;
+            target.Id = _targetRepository.Add(target);
+        }
 
-        return Convert.ToInt32((long)command.ExecuteScalar()!);
+        return job.Id;
     }
 
     public void Update(BackupJob job)
     {
-        using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
+        using (var connection = new SqliteConnection(_connectionString))
+        {
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText = """
+                UPDATE Jobs
+                SET Name = $name, SourcePath = $source, ExcludePatterns = $exclude,
+                    ScheduleType = $scheduleType, IntervalHours = $intervalHours, DailyAtTime = $dailyAtTime
+                WHERE Id = $id;
+                """;
+            BindJobParameters(command, job);
+            command.Parameters.AddWithValue("$id", job.Id);
+            command.ExecuteNonQuery();
+        }
 
-        var command = connection.CreateCommand();
-        command.CommandText = """
-            UPDATE Jobs
-            SET Name = $name, SourcePath = $source,
-                ExcludePatterns = $exclude, ScheduleType = $scheduleType,
-                IntervalHours = $intervalHours, DailyAtTime = $dailyAtTime
-            WHERE Id = $id;
-            """;
-        BindJobParameters(command, job);
-        command.Parameters.AddWithValue("$id", job.Id);
-        command.ExecuteNonQuery();
+        var existingIds = _targetRepository.GetByJobId(job.Id).Select(t => t.Id).ToHashSet();
+        var currentIds = job.Targets.Where(t => t.Id != 0).Select(t => t.Id).ToHashSet();
+
+        foreach (var staleId in existingIds.Except(currentIds))
+            _targetRepository.Delete(staleId);
+
+        foreach (var target in job.Targets)
+        {
+            target.JobId = job.Id;
+            if (target.Id == 0)
+                target.Id = _targetRepository.Add(target);
+            else
+                _targetRepository.Update(target);
+        }
     }
 
     public void Delete(int id)
     {
+        foreach (var target in _targetRepository.GetByJobId(id))
+            _targetRepository.Delete(target.Id);
+
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
-
         var command = connection.CreateCommand();
         command.CommandText = "DELETE FROM Jobs WHERE Id = $id;";
         command.Parameters.AddWithValue("$id", id);
@@ -66,21 +93,31 @@ public sealed class JobRepository
         command.Parameters.AddWithValue("$id", id);
 
         using var reader = command.ExecuteReader();
-        return reader.Read() ? ReadJob(reader) : null;
+        if (!reader.Read())
+            return null;
+
+        var job = ReadJob(reader);
+        job.Targets = _targetRepository.GetByJobId(job.Id);
+        return job;
     }
 
     public List<BackupJob> GetAll()
     {
-        using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
+        List<BackupJob> jobs;
+        using (var connection = new SqliteConnection(_connectionString))
+        {
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText = "SELECT * FROM Jobs ORDER BY Name;";
 
-        var command = connection.CreateCommand();
-        command.CommandText = "SELECT * FROM Jobs ORDER BY Name;";
+            using var reader = command.ExecuteReader();
+            jobs = new List<BackupJob>();
+            while (reader.Read())
+                jobs.Add(ReadJob(reader));
+        }
 
-        using var reader = command.ExecuteReader();
-        var jobs = new List<BackupJob>();
-        while (reader.Read())
-            jobs.Add(ReadJob(reader));
+        foreach (var job in jobs)
+            job.Targets = _targetRepository.GetByJobId(job.Id);
 
         return jobs;
     }
