@@ -75,4 +75,6 @@ public sealed class LocalTarget : IBackupTarget
 
         return Task.CompletedTask;
     }
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

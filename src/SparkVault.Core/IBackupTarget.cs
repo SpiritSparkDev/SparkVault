@@ -4,7 +4,7 @@ public sealed record TransferProgress(int FilesDone, int FilesTotal, long BytesD
 
 public sealed record RemoteFileInfo(string Path, long Size);
 
-public interface IBackupTarget
+public interface IBackupTarget : IAsyncDisposable
 {
     Task<bool> TestConnectionAsync(CancellationToken ct);
     Task UploadAsync(BackupFile file, IProgress<TransferProgress>? progress, CancellationToken ct);
