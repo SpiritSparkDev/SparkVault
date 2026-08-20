@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using MessageBox = System.Windows.MessageBox;
@@ -7,11 +8,26 @@ namespace SparkVault.App;
 
 public partial class JobEditorWindow : Window
 {
+    private sealed class TargetListItem
+    {
+        public required BackupTarget Target { get; init; }
+
+        public string Description => Target.Type switch
+        {
+            TargetType.Local => $"Lokal: {Target.DestinationPath}",
+            TargetType.Ftp => $"FTP: {Target.Host}",
+            TargetType.Sftp => $"SFTP: {Target.Host}",
+            _ => Target.Type.ToString(),
+        };
+    }
+
     private readonly int? _jobId;
+    private readonly ObservableCollection<TargetListItem> _targets = new();
 
     public JobEditorWindow(int? jobId)
     {
         InitializeComponent();
+        TargetsListBox.ItemsSource = _targets;
         _jobId = jobId;
 
         if (_jobId is { } id)
@@ -30,8 +46,9 @@ public partial class JobEditorWindow : Window
     {
         NameBox.Text = job.Name;
         SourcePathBox.Text = job.SourcePath;
-        DestinationPathBox.Text = job.DestinationPath;
         ExcludePatternsBox.Text = string.Join(Environment.NewLine, job.ExcludePatterns);
+        foreach (var target in job.Targets)
+            _targets.Add(new TargetListItem { Target = target });
         ScheduleTypeCombo.SelectedIndex = job.ScheduleType switch
         {
             ScheduleType.None => 0,
@@ -55,43 +72,68 @@ public partial class JobEditorWindow : Window
 
     private void BrowseSource_Click(object sender, RoutedEventArgs e)
     {
-        var path = PickFolder();
-        if (path is not null) SourcePathBox.Text = path;
-    }
-
-    private void BrowseDestination_Click(object sender, RoutedEventArgs e)
-    {
-        var path = PickFolder();
-        if (path is not null) DestinationPathBox.Text = path;
-    }
-
-    private static string? PickFolder()
-    {
         using var dialog = new System.Windows.Forms.FolderBrowserDialog();
-        return dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK ? dialog.SelectedPath : null;
+        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            SourcePathBox.Text = dialog.SelectedPath;
+    }
+
+    private void AddTarget_Click(object sender, RoutedEventArgs e)
+    {
+        var editor = new TargetEditorWindow(existing: null) { Owner = this };
+        if (editor.ShowDialog() == true && editor.Result is not null)
+            _targets.Add(new TargetListItem { Target = editor.Result });
+    }
+
+    private void EditTarget_Click(object sender, RoutedEventArgs e)
+    {
+        if (TargetsListBox.SelectedItem is not TargetListItem selected) return;
+
+        var editor = new TargetEditorWindow(existing: selected.Target) { Owner = this };
+        if (editor.ShowDialog() == true && editor.Result is not null)
+        {
+            var index = _targets.IndexOf(selected);
+            _targets[index] = new TargetListItem { Target = editor.Result };
+        }
+    }
+
+    private void RemoveTarget_Click(object sender, RoutedEventArgs e)
+    {
+        if (TargetsListBox.SelectedItem is TargetListItem selected)
+            _targets.Remove(selected);
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(NameBox.Text) ||
-            string.IsNullOrWhiteSpace(SourcePathBox.Text) ||
-            string.IsNullOrWhiteSpace(DestinationPathBox.Text))
+        if (string.IsNullOrWhiteSpace(NameBox.Text) || string.IsNullOrWhiteSpace(SourcePathBox.Text))
         {
-            MessageBox.Show(this, "Name, Quellpfad und Zielpfad sind Pflichtfelder.", "SparkVault",
+            MessageBox.Show(this, "Name und Quellpfad sind Pflichtfelder.", "SparkVault",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        // Destination inside the source makes every run re-scan its own output.
-        var fullSource = Path.GetFullPath(SourcePathBox.Text.Trim());
-        var fullDest = Path.GetFullPath(DestinationPathBox.Text.Trim());
-        var sourcePrefix = fullSource.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        if (fullDest.Equals(fullSource, StringComparison.OrdinalIgnoreCase) ||
-            fullDest.StartsWith(sourcePrefix, StringComparison.OrdinalIgnoreCase))
+        if (_targets.Count == 0)
         {
-            MessageBox.Show(this, "Der Zielpfad darf nicht innerhalb des Quellpfads liegen.", "SparkVault",
+            MessageBox.Show(this, "Bitte mindestens ein Ziel hinzufügen.", "SparkVault",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
+        }
+
+        // A local target inside the source makes every run re-scan its own output.
+        var fullSource = Path.GetFullPath(SourcePathBox.Text.Trim());
+        var sourcePrefix = fullSource.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        foreach (var item in _targets)
+        {
+            if (item.Target.Type != TargetType.Local || item.Target.DestinationPath is null)
+                continue;
+
+            var fullDest = Path.GetFullPath(item.Target.DestinationPath);
+            if (fullDest.Equals(fullSource, StringComparison.OrdinalIgnoreCase) ||
+                fullDest.StartsWith(sourcePrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show(this, "Ein lokales Ziel darf nicht innerhalb des Quellpfads liegen.", "SparkVault",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
         }
 
         var scheduleType = ScheduleTypeCombo.SelectedIndex switch
@@ -130,13 +172,13 @@ public partial class JobEditorWindow : Window
             Id = _jobId ?? 0,
             Name = NameBox.Text.Trim(),
             SourcePath = SourcePathBox.Text.Trim(),
-            DestinationPath = DestinationPathBox.Text.Trim(),
             ExcludePatterns = ExcludePatternsBox.Text
                 .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .ToList(),
             ScheduleType = scheduleType,
             IntervalHours = intervalHours,
             DailyAtTime = dailyAtTime,
+            Targets = _targets.Select(t => t.Target).ToList(),
         };
 
         if (_jobId is null)

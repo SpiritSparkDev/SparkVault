@@ -1,7 +1,7 @@
 <Window x:Class="SparkVault.App.JobEditorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Job bearbeiten" Height="480" Width="480" WindowStartupLocation="CenterOwner">
+        Title="Job bearbeiten" Height="560" Width="480" WindowStartupLocation="CenterOwner">
     <StackPanel Margin="12">
         <TextBlock Text="Name" />
         <TextBox x:Name="NameBox" Margin="0,0,0,8" />
@@ -12,11 +12,13 @@
             <TextBox x:Name="SourcePathBox" />
         </DockPanel>
 
-        <TextBlock Text="Zielpfad (lokal/UNC)" />
-        <DockPanel Margin="0,0,0,8">
-            <Button Content="..." Width="30" DockPanel.Dock="Right" Click="BrowseDestination_Click" />
-            <TextBox x:Name="DestinationPathBox" />
-        </DockPanel>
+        <TextBlock Text="Ziele" />
+        <ListBox x:Name="TargetsListBox" Height="80" Margin="0,0,0,4" DisplayMemberPath="Description" />
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+            <Button Content="Hinzufügen" Padding="8,2" Click="AddTarget_Click" />
+            <Button Content="Bearbeiten" Padding="8,2" Margin="8,0,0,0" Click="EditTarget_Click" />
+            <Button Content="Entfernen" Padding="8,2" Margin="8,0,0,0" Click="RemoveTarget_Click" />
+        </StackPanel>
 
         <TextBlock Text="Ausschlussmuster (eine Zeile pro Muster, z. B. *.tmp)" />
         <TextBox x:Name="ExcludePatternsBox" Height="60" AcceptsReturn="True" TextWrapping="Wrap" Margin="0,0,0,8" />
