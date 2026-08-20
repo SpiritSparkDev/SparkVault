@@ -19,7 +19,7 @@ public class RunRepositoryTests
         {
             SparkVaultDatabase.EnsureCreated(connectionString);
             var jobRepo = new JobRepository(connectionString);
-            var jobId = jobRepo.Add(new BackupJob { Name = "A", SourcePath = "C:\\a", DestinationPath = "D:\\a" });
+            var jobId = jobRepo.Add(new BackupJob { Name = "A", SourcePath = "C:\\a" });
 
             var runRepo = new RunRepository(connectionString);
             var run = new BackupRun { JobId = jobId, StartedAt = new DateTime(2026, 8, 19, 10, 0, 0), Status = RunStatus.Failed };
@@ -51,7 +51,7 @@ public class RunRepositoryTests
         {
             SparkVaultDatabase.EnsureCreated(connectionString);
             var jobRepo = new JobRepository(connectionString);
-            var jobId = jobRepo.Add(new BackupJob { Name = "A", SourcePath = "C:\\a", DestinationPath = "D:\\a" });
+            var jobId = jobRepo.Add(new BackupJob { Name = "A", SourcePath = "C:\\a" });
 
             var runRepo = new RunRepository(connectionString);
             runRepo.Add(new BackupRun { JobId = jobId, StartedAt = new DateTime(2026, 8, 18, 10, 0, 0), Status = RunStatus.Success });
@@ -76,7 +76,7 @@ public class RunRepositoryTests
         {
             SparkVaultDatabase.EnsureCreated(connectionString);
             var jobRepo = new JobRepository(connectionString);
-            var jobId = jobRepo.Add(new BackupJob { Name = "A", SourcePath = "C:\\a", DestinationPath = "D:\\a" });
+            var jobId = jobRepo.Add(new BackupJob { Name = "A", SourcePath = "C:\\a" });
 
             var startedAt = DateTime.UtcNow;
             var runRepo = new RunRepository(connectionString);

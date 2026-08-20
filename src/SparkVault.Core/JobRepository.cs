@@ -89,7 +89,7 @@ public sealed class JobRepository
     {
         command.Parameters.AddWithValue("$name", job.Name);
         command.Parameters.AddWithValue("$source", job.SourcePath);
-        command.Parameters.AddWithValue("$dest", job.DestinationPath);
+        command.Parameters.AddWithValue("$dest", "");
         command.Parameters.AddWithValue("$exclude", string.Join('\n', job.ExcludePatterns));
         command.Parameters.AddWithValue("$scheduleType", job.ScheduleType.ToString());
         command.Parameters.AddWithValue("$intervalHours", (object?)job.IntervalHours ?? DBNull.Value);
@@ -104,7 +104,6 @@ public sealed class JobRepository
             Id = reader.GetInt32(reader.GetOrdinal("Id")),
             Name = reader.GetString(reader.GetOrdinal("Name")),
             SourcePath = reader.GetString(reader.GetOrdinal("SourcePath")),
-            DestinationPath = reader.GetString(reader.GetOrdinal("DestinationPath")),
             ExcludePatterns = excludeRaw.Length == 0
                 ? new List<string>()
                 : excludeRaw.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList(),

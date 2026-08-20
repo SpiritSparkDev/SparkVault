@@ -29,7 +29,6 @@ public class BackupRunnerTests
             {
                 Name = "Test",
                 SourcePath = srcDir.FullName,
-                DestinationPath = destDir.FullName,
             });
             var job = jobRepo.GetById(jobId)!;
 
@@ -69,7 +68,6 @@ public class BackupRunnerTests
             {
                 Name = "Test",
                 SourcePath = Path.Combine(Path.GetTempPath(), "sparkvault-does-not-exist"),
-                DestinationPath = destDir.FullName,
             });
             var job = jobRepo.GetById(jobId)!;
 

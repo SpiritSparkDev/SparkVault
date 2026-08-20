@@ -24,7 +24,6 @@ public class JobRepositoryTests
             {
                 Name = "Documents",
                 SourcePath = @"C:\Users\me\Documents",
-                DestinationPath = @"D:\Backups\Documents",
                 ExcludePatterns = new List<string> { "*.tmp", "cache\\*" },
                 ScheduleType = ScheduleType.DailyAt,
                 DailyAtTime = new TimeOnly(2, 0),
@@ -54,7 +53,7 @@ public class JobRepositoryTests
         {
             SparkVaultDatabase.EnsureCreated(connectionString);
             var repo = new JobRepository(connectionString);
-            var id = repo.Add(new BackupJob { Name = "Old", SourcePath = "C:\\a", DestinationPath = "D:\\b" });
+            var id = repo.Add(new BackupJob { Name = "Old", SourcePath = "C:\\a" });
 
             var job = repo.GetById(id)!;
             job.Name = "New";
@@ -76,7 +75,7 @@ public class JobRepositoryTests
         {
             SparkVaultDatabase.EnsureCreated(connectionString);
             var repo = new JobRepository(connectionString);
-            var id = repo.Add(new BackupJob { Name = "Temp", SourcePath = "C:\\a", DestinationPath = "D:\\b" });
+            var id = repo.Add(new BackupJob { Name = "Temp", SourcePath = "C:\\a" });
 
             repo.Delete(id);
 
@@ -96,8 +95,8 @@ public class JobRepositoryTests
         {
             SparkVaultDatabase.EnsureCreated(connectionString);
             var repo = new JobRepository(connectionString);
-            repo.Add(new BackupJob { Name = "A", SourcePath = "C:\\a", DestinationPath = "D:\\a" });
-            repo.Add(new BackupJob { Name = "B", SourcePath = "C:\\b", DestinationPath = "D:\\b" });
+            repo.Add(new BackupJob { Name = "A", SourcePath = "C:\\a" });
+            repo.Add(new BackupJob { Name = "B", SourcePath = "C:\\b" });
 
             Assert.Equal(2, repo.GetAll().Count);
         }

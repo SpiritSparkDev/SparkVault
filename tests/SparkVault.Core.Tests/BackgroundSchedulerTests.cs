@@ -28,7 +28,6 @@ public class BackgroundSchedulerTests
             {
                 Name = "Scheduled",
                 SourcePath = srcDir.FullName,
-                DestinationPath = destDir.FullName,
                 ScheduleType = ScheduleType.Interval,
                 IntervalHours = 6,
             });
@@ -38,7 +37,7 @@ public class BackgroundSchedulerTests
 
             await using var scheduler = new BackgroundScheduler(
                 jobRepo, runRepo, runner,
-                job => new LocalTarget(job.DestinationPath),
+                job => new LocalTarget(destDir.FullName),
                 pollInterval: TimeSpan.FromMilliseconds(50),
                 Log.Logger);
 

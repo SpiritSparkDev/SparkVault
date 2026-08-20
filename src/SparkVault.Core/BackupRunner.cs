@@ -37,7 +37,7 @@ public sealed class BackupRunner
                 run.Id = _runRepository.Add(run);
 
                 if (!await target.TestConnectionAsync(ct))
-                    throw new IOException($"Zielpfad nicht erreichbar: {job.DestinationPath}");
+                    throw new IOException($"Zielpfad nicht erreichbar: {job.Name}");
 
                 var files = FileScanner.Scan(job.SourcePath, job.ExcludePatterns);
                 long totalBytes = files.Sum(f => f.Size);
