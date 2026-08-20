@@ -18,16 +18,32 @@ public static class SparkVaultDatabase
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 Name TEXT NOT NULL,
                 SourcePath TEXT NOT NULL,
-                DestinationPath TEXT NOT NULL,
                 ExcludePatterns TEXT NOT NULL,
                 ScheduleType TEXT NOT NULL,
                 IntervalHours INTEGER NULL,
                 DailyAtTime TEXT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS Targets (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                JobId INTEGER NOT NULL,
+                Type TEXT NOT NULL,
+                DestinationPath TEXT NULL,
+                Host TEXT NULL,
+                Port INTEGER NULL,
+                Username TEXT NULL,
+                EncryptedPassword TEXT NULL,
+                RemotePath TEXT NULL,
+                EncryptionMode TEXT NULL,
+                PrivateKeyPath TEXT NULL,
+                EncryptedKeyPassphrase TEXT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS Runs (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 JobId INTEGER NOT NULL,
+                TargetId INTEGER NOT NULL,
+                RunGroupId TEXT NOT NULL,
                 StartedAt TEXT NOT NULL,
                 EndedAt TEXT NULL,
                 Status TEXT NOT NULL,

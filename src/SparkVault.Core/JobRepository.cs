@@ -18,8 +18,8 @@ public sealed class JobRepository
 
         var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO Jobs (Name, SourcePath, DestinationPath, ExcludePatterns, ScheduleType, IntervalHours, DailyAtTime)
-            VALUES ($name, $source, $dest, $exclude, $scheduleType, $intervalHours, $dailyAtTime);
+            INSERT INTO Jobs (Name, SourcePath, ExcludePatterns, ScheduleType, IntervalHours, DailyAtTime)
+            VALUES ($name, $source, $exclude, $scheduleType, $intervalHours, $dailyAtTime);
             SELECT last_insert_rowid();
             """;
         BindJobParameters(command, job);
@@ -35,7 +35,7 @@ public sealed class JobRepository
         var command = connection.CreateCommand();
         command.CommandText = """
             UPDATE Jobs
-            SET Name = $name, SourcePath = $source, DestinationPath = $dest,
+            SET Name = $name, SourcePath = $source,
                 ExcludePatterns = $exclude, ScheduleType = $scheduleType,
                 IntervalHours = $intervalHours, DailyAtTime = $dailyAtTime
             WHERE Id = $id;
@@ -89,7 +89,6 @@ public sealed class JobRepository
     {
         command.Parameters.AddWithValue("$name", job.Name);
         command.Parameters.AddWithValue("$source", job.SourcePath);
-        command.Parameters.AddWithValue("$dest", "");
         command.Parameters.AddWithValue("$exclude", string.Join('\n', job.ExcludePatterns));
         command.Parameters.AddWithValue("$scheduleType", job.ScheduleType.ToString());
         command.Parameters.AddWithValue("$intervalHours", (object?)job.IntervalHours ?? DBNull.Value);

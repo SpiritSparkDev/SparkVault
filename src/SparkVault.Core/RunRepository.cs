@@ -19,8 +19,8 @@ public sealed class RunRepository
 
         var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO Runs (JobId, StartedAt, EndedAt, Status, FileCount, TotalBytes, ErrorMessage)
-            VALUES ($jobId, $startedAt, $endedAt, $status, $fileCount, $totalBytes, $error);
+            INSERT INTO Runs (JobId, TargetId, RunGroupId, StartedAt, EndedAt, Status, FileCount, TotalBytes, ErrorMessage)
+            VALUES ($jobId, $targetId, $runGroupId, $startedAt, $endedAt, $status, $fileCount, $totalBytes, $error);
             SELECT last_insert_rowid();
             """;
         BindRunParameters(command, run);
@@ -36,7 +36,7 @@ public sealed class RunRepository
         var command = connection.CreateCommand();
         command.CommandText = """
             UPDATE Runs
-            SET JobId = $jobId, StartedAt = $startedAt, EndedAt = $endedAt, Status = $status,
+            SET JobId = $jobId, TargetId = $targetId, RunGroupId = $runGroupId, StartedAt = $startedAt, EndedAt = $endedAt, Status = $status,
                 FileCount = $fileCount, TotalBytes = $totalBytes, ErrorMessage = $error
             WHERE Id = $id;
             """;
@@ -78,6 +78,8 @@ public sealed class RunRepository
     private static void BindRunParameters(SqliteCommand command, BackupRun run)
     {
         command.Parameters.AddWithValue("$jobId", run.JobId);
+        command.Parameters.AddWithValue("$targetId", 1);
+        command.Parameters.AddWithValue("$runGroupId", "");
         command.Parameters.AddWithValue("$startedAt", run.StartedAt.ToString("O"));
         command.Parameters.AddWithValue("$endedAt", (object?)run.EndedAt?.ToString("O") ?? DBNull.Value);
         command.Parameters.AddWithValue("$status", run.Status.ToString());
