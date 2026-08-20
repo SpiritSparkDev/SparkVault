@@ -44,7 +44,12 @@ public sealed class BackgroundScheduler : IAsyncDisposable
                         // Both arguments must live in the same time frame; runs are stored as UTC.
                         if (ScheduleCalculator.IsDue(job, lastRun?.StartedAt.ToLocalTime(), DateTime.Now))
                         {
-                            await _runner.RunAsync(job, _targetFactory(job), progress: null, _cts.Token);
+                            // ponytail: temporary compile bridge (Task 12) — BackupRunner now builds
+                            // targets itself from job.Targets, so _targetFactory is unused; kept as a
+                            // field only to avoid changing this class's constructor before Task 13
+                            // removes the parameter wholesale.
+                            _ = _targetFactory;
+                            await _runner.RunAsync(job, progress: null, _cts.Token);
                         }
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
