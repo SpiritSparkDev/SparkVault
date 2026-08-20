@@ -5,12 +5,12 @@ namespace SparkVault.Core;
 public sealed class FtpTarget : IBackupTarget
 {
     private const string TempSuffix = ".sparkvault-tmp";
-    private readonly BackupTarget _config;
+    private readonly string _remotePath;
     private readonly AsyncFtpClient _client;
 
     public FtpTarget(BackupTarget config)
     {
-        _config = config;
+        _remotePath = config.RemotePath ?? throw new InvalidOperationException("FTP target requires RemotePath.");
         var ftpConfig = new FtpConfig
         {
             EncryptionMode = config.EncryptionMode switch
@@ -37,8 +37,8 @@ public sealed class FtpTarget : IBackupTarget
         try
         {
             await EnsureConnectedAsync(ct);
-            if (!await _client.DirectoryExists(_config.RemotePath, ct))
-                await _client.CreateDirectory(_config.RemotePath, ct);
+            if (!await _client.DirectoryExists(_remotePath, ct))
+                await _client.CreateDirectory(_remotePath, ct);
             return true;
         }
         catch
@@ -73,7 +73,7 @@ public sealed class FtpTarget : IBackupTarget
         }
         catch
         {
-            try { await _client.DeleteFile(tempPath, ct); } catch { /* best effort cleanup */ }
+            try { await _client.DeleteFile(tempPath, CancellationToken.None); } catch { /* best effort cleanup */ }
             throw;
         }
     }
@@ -81,11 +81,11 @@ public sealed class FtpTarget : IBackupTarget
     public async Task<IEnumerable<RemoteFileInfo>> ListExistingAsync(CancellationToken ct)
     {
         await EnsureConnectedAsync(ct);
-        if (!await _client.DirectoryExists(_config.RemotePath, ct))
+        if (!await _client.DirectoryExists(_remotePath, ct))
             return Enumerable.Empty<RemoteFileInfo>();
 
-        var items = await _client.GetListing(_config.RemotePath, FtpListOption.Recursive, ct);
-        var rootPrefix = _config.RemotePath.TrimEnd('/') + "/";
+        var items = await _client.GetListing(_remotePath, FtpListOption.Recursive, ct);
+        var rootPrefix = _remotePath.TrimEnd('/') + "/";
         return items
             .Where(i => i.Type == FtpObjectType.File)
             .Select(i => new RemoteFileInfo(
@@ -112,5 +112,5 @@ public sealed class FtpTarget : IBackupTarget
     // backslashes — mixing separators here is the same class of bug the exclusion matcher
     // hit with backslash-as-escape; plain string concatenation avoids Path.* entirely.
     private string RemotePath(string relativePath) =>
-        string.Concat(_config.RemotePath.TrimEnd('/'), "/", relativePath.Replace('\\', '/'));
+        string.Concat(_remotePath.TrimEnd('/'), "/", relativePath.Replace('\\', '/'));
 }
