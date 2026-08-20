@@ -16,7 +16,7 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="150" />
                 <DataGridTextColumn Header="Quelle" Binding="{Binding SourcePath}" Width="200" />
-                <DataGridTextColumn Header="Ziel" Binding="{Binding DestinationPath}" Width="200" />
+                <DataGridTextColumn Header="Ziele" Binding="{Binding TargetsDisplay}" Width="220" />
                 <DataGridTextColumn Header="Letzter Lauf" Binding="{Binding LastRunDisplay}" Width="140" />
                 <DataGridTextColumn Header="Nächster Lauf" Binding="{Binding NextRunDisplay}" Width="140" />
                 <DataGridTextColumn Header="Status" Binding="{Binding LastStatusDisplay}" Width="80" />

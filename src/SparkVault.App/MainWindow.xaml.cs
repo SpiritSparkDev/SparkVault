@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows;
 using SparkVault.Core;
 using MessageBox = System.Windows.MessageBox;
@@ -10,7 +11,7 @@ public sealed class JobRow
     public int Id { get; init; }
     public string Name { get; init; } = "";
     public string SourcePath { get; init; } = "";
-    public string DestinationPath { get; init; } = "";
+    public string TargetsDisplay { get; init; } = "";
     public string LastRunDisplay { get; init; } = "-";
     public string NextRunDisplay { get; init; } = "-";
     public string LastStatusDisplay { get; init; } = "-";
@@ -32,27 +33,33 @@ public partial class MainWindow : Window
         _jobs.Clear();
         foreach (var job in App.JobRepository.GetAll())
         {
-            var lastRun = App.RunRepository.GetLatestByJobId(job.Id);
+            var latestGroupId = App.RunRepository.GetLatestRunGroupId(job.Id);
+            var groupRuns = latestGroupId is { } groupId ? App.RunRepository.GetByRunGroupId(groupId) : new List<BackupRun>();
+            DateTime? lastRunStartedAt = groupRuns.Count > 0 ? groupRuns.Min(r => r.StartedAt) : null;
+            RunStatus? lastStatus = groupRuns.Count == 0
+                ? null
+                : groupRuns.All(r => r.Status == RunStatus.Success) ? RunStatus.Success : RunStatus.Failed;
+
             _jobs.Add(new JobRow
             {
                 Id = job.Id,
                 Name = job.Name,
                 SourcePath = job.SourcePath,
-                DestinationPath = job.DestinationPath,
-                LastRunDisplay = lastRun?.StartedAt.ToLocalTime().ToString("g") ?? "-",
-                NextRunDisplay = DescribeNextRun(job, lastRun),
-                LastStatusDisplay = lastRun?.Status.ToString() ?? "-",
+                TargetsDisplay = string.Join("; ", job.Targets.Select(DescribeTarget)),
+                LastRunDisplay = lastRunStartedAt?.ToLocalTime().ToString("g") ?? "-",
+                NextRunDisplay = DescribeNextRun(job, lastRunStartedAt),
+                LastStatusDisplay = lastStatus?.ToString() ?? "-",
             });
         }
     }
 
-    private static string DescribeNextRun(BackupJob job, BackupRun? lastRun)
+    private static string DescribeNextRun(BackupJob job, DateTime? lastRunStartedAt)
     {
         switch (job.ScheduleType)
         {
             case ScheduleType.Interval when job.IntervalHours is { } hours:
-                if (lastRun is null) return "fällig";
-                return lastRun.StartedAt.ToLocalTime().AddHours(hours).ToString("g");
+                if (lastRunStartedAt is null) return "fällig";
+                return lastRunStartedAt.Value.ToLocalTime().AddHours(hours).ToString("g");
 
             case ScheduleType.DailyAt when job.DailyAtTime is { } time:
                 var todayTarget = DateTime.Today + time.ToTimeSpan();
@@ -63,6 +70,14 @@ public partial class MainWindow : Window
                 return "-";
         }
     }
+
+    private static string DescribeTarget(BackupTarget target) => target.Type switch
+    {
+        TargetType.Local => $"Lokal: {target.DestinationPath}",
+        TargetType.Ftp => $"FTP: {target.Host}",
+        TargetType.Sftp => $"SFTP: {target.Host}",
+        _ => target.Type.ToString(),
+    };
 
     private JobRow? SelectedJob => JobsGrid.SelectedItem as JobRow;
 
@@ -106,7 +121,7 @@ public partial class MainWindow : Window
 
         try
         {
-            await App.Runner.RunAsync(job, App.CreateTarget(job), progress, CancellationToken.None);
+            await App.Runner.RunAsync(job, progress, CancellationToken.None);
         }
         finally
         {
