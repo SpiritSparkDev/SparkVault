@@ -7,7 +7,6 @@ public sealed class BackgroundScheduler : IAsyncDisposable
     private readonly JobRepository _jobRepository;
     private readonly RunRepository _runRepository;
     private readonly BackupRunner _runner;
-    private readonly Func<BackupJob, IBackupTarget> _targetFactory;
     private readonly ILogger _logger;
     private readonly PeriodicTimer _timer;
     private readonly CancellationTokenSource _cts = new();
@@ -17,14 +16,12 @@ public sealed class BackgroundScheduler : IAsyncDisposable
         JobRepository jobRepository,
         RunRepository runRepository,
         BackupRunner runner,
-        Func<BackupJob, IBackupTarget> targetFactory,
         TimeSpan pollInterval,
         ILogger logger)
     {
         _jobRepository = jobRepository;
         _runRepository = runRepository;
         _runner = runner;
-        _targetFactory = targetFactory;
         _logger = logger;
         _timer = new PeriodicTimer(pollInterval);
         _loopTask = Task.Run(LoopAsync);
@@ -44,11 +41,6 @@ public sealed class BackgroundScheduler : IAsyncDisposable
                         // Both arguments must live in the same time frame; runs are stored as UTC.
                         if (ScheduleCalculator.IsDue(job, lastRun?.StartedAt.ToLocalTime(), DateTime.Now))
                         {
-                            // ponytail: temporary compile bridge (Task 12) — BackupRunner now builds
-                            // targets itself from job.Targets, so _targetFactory is unused; kept as a
-                            // field only to avoid changing this class's constructor before Task 13
-                            // removes the parameter wholesale.
-                            _ = _targetFactory;
                             await _runner.RunAsync(job, progress: null, _cts.Token);
                         }
                     }

@@ -30,8 +30,6 @@ public class BackgroundSchedulerTests
                 SourcePath = srcDir.FullName,
                 ScheduleType = ScheduleType.Interval,
                 IntervalHours = 6,
-                // ponytail: temporary bridge (Task 12) — BackupRunner now runs job.Targets, not the
-                // targetFactory below; superseded wholesale by Task 13's rewrite of this test file.
                 Targets = new List<BackupTarget> { new() { Type = TargetType.Local, DestinationPath = destDir.FullName } },
             });
 
@@ -40,7 +38,6 @@ public class BackgroundSchedulerTests
 
             await using var scheduler = new BackgroundScheduler(
                 jobRepo, runRepo, runner,
-                job => new LocalTarget(destDir.FullName),
                 pollInterval: TimeSpan.FromMilliseconds(50),
                 Log.Logger);
 
