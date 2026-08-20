@@ -6,6 +6,7 @@
         <DataGrid.Columns>
             <DataGridTextColumn Header="Start" Binding="{Binding StartedAt}" Width="140" />
             <DataGridTextColumn Header="Ende" Binding="{Binding EndedAt}" Width="140" />
+            <DataGridTextColumn Header="Ziel" Binding="{Binding Target}" Width="140" />
             <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="80" />
             <DataGridTextColumn Header="Dateien" Binding="{Binding FileCount}" Width="70" />
             <DataGridTextColumn Header="Bytes" Binding="{Binding TotalBytes}" Width="90" />
