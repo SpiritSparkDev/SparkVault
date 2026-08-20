@@ -16,9 +16,6 @@ public partial class App : Application
     private BackgroundScheduler? _scheduler;
     private NotifyIcon? _trayIcon;
 
-    /// <summary>Single place that decides how a job's backup target is built.</summary>
-    public static IBackupTarget CreateTarget(BackupJob job) => new LocalTarget(job.DestinationPath);
-
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -51,7 +48,6 @@ public partial class App : Application
             JobRepository,
             RunRepository,
             Runner,
-            CreateTarget,
             pollInterval: TimeSpan.FromMinutes(1),
             Log.Logger);
 
@@ -76,7 +72,7 @@ public partial class App : Application
             {
                 var jobItem = new ToolStripMenuItem(job.Name);
                 jobItem.Click += async (_, _) =>
-                    await Runner.RunAsync(job, CreateTarget(job), progress: null, CancellationToken.None);
+                    await Runner.RunAsync(job, progress: null, CancellationToken.None);
                 runNowMenu.DropDownItems.Add(jobItem);
             }
             if (runNowMenu.DropDownItems.Count == 0)
