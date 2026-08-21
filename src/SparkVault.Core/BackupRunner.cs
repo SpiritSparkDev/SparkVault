@@ -27,13 +27,14 @@ public sealed class BackupRunner
         var runGroupId = Guid.NewGuid();
         var results = new List<BackupRun>();
         var lockHeld = false;
+        var scanFailed = false;
 
         try
         {
             await _runLock.WaitAsync(ct);
             lockHeld = true;
 
-            IReadOnlyList<BackupFile> files;
+            IReadOnlyList<BackupFile> files = Array.Empty<BackupFile>();
             try
             {
                 files = FileScanner.Scan(job.SourcePath, job.ExcludePatterns);
@@ -44,13 +45,25 @@ public sealed class BackupRunner
                 // log shows every target was attempted-and-failed rather than silently empty.
                 foreach (var targetConfig in job.Targets)
                     results.Add(RecordImmediateFailure(job, targetConfig, runGroupId, ex.Message));
-
-                RunCompleted?.Invoke(job, RunStatus.Failed);
-                return results;
+                scanFailed = true;
             }
 
-            foreach (var targetConfig in job.Targets)
-                results.Add(await RunForTargetAsync(job, targetConfig, runGroupId, files, progress, ct));
+            if (!scanFailed)
+            {
+                foreach (var targetConfig in job.Targets)
+                {
+                    // Already cancelled: this target never got its turn, so it is Cancelled — not
+                    // a connection failure, which is what running it through RunForTargetAsync
+                    // would log (TestConnectionAsync swallows the cancellation and returns false).
+                    if (ct.IsCancellationRequested)
+                    {
+                        results.Add(RecordCancelled(job, targetConfig, runGroupId));
+                        continue;
+                    }
+
+                    results.Add(await RunForTargetAsync(job, targetConfig, runGroupId, files, progress, ct));
+                }
+            }
         }
         finally
         {
@@ -89,7 +102,7 @@ public sealed class BackupRunner
             await using var target = TargetFactory.Create(targetConfig);
 
             if (!await target.TestConnectionAsync(ct))
-                throw new IOException($"Ziel nicht erreichbar: {DescribeTarget(targetConfig)}");
+                throw new IOException($"Ziel nicht erreichbar: {targetConfig.Describe()}");
 
             long totalBytes = files.Sum(f => f.Size);
 
@@ -104,18 +117,18 @@ public sealed class BackupRunner
 
             run.Status = RunStatus.Success;
             _logger.Information("Job {JobName} -> {Target} completed: {FileCount} files, {TotalBytes} bytes",
-                job.Name, DescribeTarget(targetConfig), done, bytesDone);
+                job.Name, targetConfig.Describe(), done, bytesDone);
         }
         catch (OperationCanceledException)
         {
             run.Status = RunStatus.Cancelled;
-            _logger.Warning("Job {JobName} -> {Target} was cancelled", job.Name, DescribeTarget(targetConfig));
+            _logger.Warning("Job {JobName} -> {Target} was cancelled", job.Name, targetConfig.Describe());
         }
         catch (Exception ex)
         {
             run.Status = RunStatus.Failed;
             run.ErrorMessage = ex.Message;
-            _logger.Error(ex, "Job {JobName} -> {Target} failed", job.Name, DescribeTarget(targetConfig));
+            _logger.Error(ex, "Job {JobName} -> {Target} failed", job.Name, targetConfig.Describe());
         }
         finally
         {
@@ -142,16 +155,23 @@ public sealed class BackupRunner
             ErrorMessage = errorMessage,
         };
         run.Id = _runRepository.Add(run);
-        _runRepository.Update(run);
-        _logger.Error("Job {JobName} -> {Target} failed: {Error}", job.Name, DescribeTarget(targetConfig), errorMessage);
+        _logger.Error("Job {JobName} -> {Target} failed: {Error}", job.Name, targetConfig.Describe(), errorMessage);
         return run;
     }
 
-    private static string DescribeTarget(BackupTarget target) => target.Type switch
+    private BackupRun RecordCancelled(BackupJob job, BackupTarget targetConfig, Guid runGroupId)
     {
-        TargetType.Local => $"Local:{target.DestinationPath}",
-        TargetType.Ftp => $"FTP:{target.Host}",
-        TargetType.Sftp => $"SFTP:{target.Host}",
-        _ => target.Type.ToString(),
-    };
+        var run = new BackupRun
+        {
+            JobId = job.Id,
+            TargetId = targetConfig.Id,
+            RunGroupId = runGroupId,
+            StartedAt = DateTime.UtcNow,
+            EndedAt = DateTime.UtcNow,
+            Status = RunStatus.Cancelled,
+        };
+        run.Id = _runRepository.Add(run);
+        _logger.Warning("Job {JobName} -> {Target} was cancelled before it started", job.Name, targetConfig.Describe());
+        return run;
+    }
 }
