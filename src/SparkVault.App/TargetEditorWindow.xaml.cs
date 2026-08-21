@@ -26,6 +26,7 @@ public partial class TargetEditorWindow : Window
         else
         {
             TypeCombo.SelectedIndex = 0;
+            EncryptionModeCombo.SelectedIndex = 0;
         }
     }
 
@@ -82,7 +83,7 @@ public partial class TargetEditorWindow : Window
             PrivateKeyPathBox.Text = dialog.FileName;
     }
 
-    private BackupTarget? BuildTargetFromForm(bool validate)
+    private BackupTarget? BuildTargetFromForm()
     {
         var type = TypeCombo.SelectedIndex switch
         {
@@ -95,7 +96,7 @@ public partial class TargetEditorWindow : Window
 
         if (type == TargetType.Local)
         {
-            if (validate && string.IsNullOrWhiteSpace(DestinationPathBox.Text))
+            if (string.IsNullOrWhiteSpace(DestinationPathBox.Text))
             {
                 MessageBox.Show(this, "Bitte einen Zielpfad angeben.", "SparkVault", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return null;
@@ -104,17 +105,17 @@ public partial class TargetEditorWindow : Window
             return target;
         }
 
-        if (validate && string.IsNullOrWhiteSpace(HostBox.Text))
+        if (string.IsNullOrWhiteSpace(HostBox.Text))
         {
             MessageBox.Show(this, "Bitte einen Host angeben.", "SparkVault", MessageBoxButton.OK, MessageBoxImage.Warning);
             return null;
         }
-        if (validate && string.IsNullOrWhiteSpace(UsernameBox.Text))
+        if (string.IsNullOrWhiteSpace(UsernameBox.Text))
         {
             MessageBox.Show(this, "Bitte einen Benutzernamen angeben.", "SparkVault", MessageBoxButton.OK, MessageBoxImage.Warning);
             return null;
         }
-        if (validate && string.IsNullOrWhiteSpace(RemotePathBox.Text))
+        if (string.IsNullOrWhiteSpace(RemotePathBox.Text))
         {
             MessageBox.Show(this, "Bitte einen Remote-Pfad angeben.", "SparkVault", MessageBoxButton.OK, MessageBoxImage.Warning);
             return null;
@@ -125,17 +126,11 @@ public partial class TargetEditorWindow : Window
         {
             if (!int.TryParse(PortBox.Text, out var parsedPort) || parsedPort <= 0)
             {
-                if (validate)
-                {
-                    MessageBox.Show(this, "Bitte einen gültigen Port angeben (oder leer lassen).", "SparkVault",
-                        MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return null;
-                }
+                MessageBox.Show(this, "Bitte einen gültigen Port angeben (oder leer lassen).", "SparkVault",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return null;
             }
-            else
-            {
-                port = parsedPort;
-            }
+            port = parsedPort;
         }
 
         target.Host = HostBox.Text.Trim();
@@ -163,7 +158,7 @@ public partial class TargetEditorWindow : Window
                 ? CredentialProtector.Protect(KeyPassphraseBox.Password)
                 : _existingEncryptedKeyPassphrase;
 
-            if (validate && string.IsNullOrEmpty(target.EncryptedPassword) && string.IsNullOrEmpty(target.PrivateKeyPath))
+            if (string.IsNullOrEmpty(target.EncryptedPassword) && string.IsNullOrEmpty(target.PrivateKeyPath))
             {
                 MessageBox.Show(this, "Bitte Passwort und/oder privaten Schlüssel angeben.", "SparkVault",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -176,7 +171,7 @@ public partial class TargetEditorWindow : Window
 
     private async void TestConnection_Click(object sender, RoutedEventArgs e)
     {
-        var target = BuildTargetFromForm(validate: true);
+        var target = BuildTargetFromForm();
         if (target is null) return;
 
         TestConnectionButton.IsEnabled = false;
@@ -200,7 +195,7 @@ public partial class TargetEditorWindow : Window
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-        var target = BuildTargetFromForm(validate: true);
+        var target = BuildTargetFromForm();
         if (target is null) return;
 
         Result = target;

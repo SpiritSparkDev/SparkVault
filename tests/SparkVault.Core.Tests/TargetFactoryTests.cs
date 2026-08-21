@@ -16,17 +16,17 @@ public class TargetFactoryTests
     }
 
     [Fact]
-    public void Create_Ftp_ReturnsFtpTarget()
+    public async Task Create_Ftp_ReturnsFtpTarget()
     {
         var config = new BackupTarget { Type = TargetType.Ftp, Host = "ftp.example.com", Username = "u", RemotePath = "/x" };
 
-        var target = TargetFactory.Create(config);
+        await using var target = TargetFactory.Create(config);
 
         Assert.IsType<FtpTarget>(target);
     }
 
     [Fact]
-    public void Create_Sftp_ReturnsSftpTarget()
+    public async Task Create_Sftp_ReturnsSftpTarget()
     {
         var config = new BackupTarget
         {
@@ -37,7 +37,7 @@ public class TargetFactoryTests
             EncryptedPassword = CredentialProtector.Protect("password")
         };
 
-        var target = TargetFactory.Create(config);
+        await using var target = TargetFactory.Create(config);
 
         Assert.IsType<SftpTarget>(target);
     }
