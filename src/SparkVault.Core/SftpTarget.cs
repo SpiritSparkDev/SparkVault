@@ -67,6 +67,8 @@ public sealed class SftpTarget : IBackupTarget
             await Task.Run(() =>
             {
                 var remoteDir = finalPath[..finalPath.LastIndexOf('/')];
+                if (remoteDir.Length == 0)
+                    remoteDir = "/";
                 if (!_client.Exists(remoteDir))
                     CreateDirectoryRecursive(remoteDir);
 
@@ -78,9 +80,9 @@ public sealed class SftpTarget : IBackupTarget
                     throw new IOException(
                         $"Verifikation fehlgeschlagen für {file.RelativePath}: erwartet {file.Size} Bytes, erhalten {attrs.Size}.");
 
-                if (_client.Exists(finalPath))
-                    _client.DeleteFile(finalPath);
-                _client.RenameFile(tempPath, finalPath);
+                // POSIX rename atomically replaces an existing destination — no delete-first
+                // window where finalPath holds nothing at all.
+                _client.RenameFile(tempPath, finalPath, isPosix: true);
             }, ct);
         }
         catch

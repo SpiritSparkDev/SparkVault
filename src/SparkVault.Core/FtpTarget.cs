@@ -11,6 +11,9 @@ public sealed class FtpTarget : IBackupTarget
     public FtpTarget(BackupTarget config)
     {
         _remotePath = config.RemotePath ?? throw new InvalidOperationException("FTP target requires RemotePath.");
+        var host = config.Host ?? throw new InvalidOperationException("FTP target requires Host.");
+        var username = config.Username ?? throw new InvalidOperationException("FTP target requires Username.");
+
         var ftpConfig = new FtpConfig
         {
             EncryptionMode = config.EncryptionMode switch
@@ -23,7 +26,7 @@ public sealed class FtpTarget : IBackupTarget
         var password = string.IsNullOrEmpty(config.EncryptedPassword)
             ? ""
             : CredentialProtector.Unprotect(config.EncryptedPassword);
-        _client = new AsyncFtpClient(config.Host, config.Username, password, config.Port ?? 21, ftpConfig);
+        _client = new AsyncFtpClient(host, username, password, config.Port ?? 21, ftpConfig);
     }
 
     private async Task EnsureConnectedAsync(CancellationToken ct)
@@ -67,6 +70,10 @@ public sealed class FtpTarget : IBackupTarget
                 throw new IOException(
                     $"Verifikation fehlgeschlagen für {file.RelativePath}: erwartet {file.Size} Bytes, erhalten {info?.Size ?? -1}.");
 
+            // ponytail: FTP has no atomic replace-on-rename (unlike SFTP's isPosix rename). A kill
+            // between DeleteFile and Rename below leaves no file at finalPath — narrow window,
+            // self-healing on the next run (the file just gets re-uploaded). Revisit if FluentFTP
+            // or the target server ever exposes an atomic alternative.
             if (await _client.FileExists(finalPath, ct))
                 await _client.DeleteFile(finalPath, ct);
             await _client.Rename(tempPath, finalPath, ct);

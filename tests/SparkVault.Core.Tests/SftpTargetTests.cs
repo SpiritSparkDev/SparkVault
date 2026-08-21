@@ -103,6 +103,38 @@ public class SftpTargetTests
         }
     }
 
+    // Guards the atomic POSIX rename: the commit step no longer deletes finalPath first, so a
+    // re-upload over an existing file has to still land the new content (and leave no temp file).
+    [Fact]
+    public async Task UploadAsync_OverExistingFile_ReplacesContent()
+    {
+        if (!DockerTestHelper.IsReachable(Host, Port)) return;
+
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-sftp-src-");
+        try
+        {
+            var filePath = Path.Combine(srcDir.FullName, "d.txt");
+            await using var target = new SftpTarget(NewTestConfig());
+
+            await File.WriteAllTextAsync(filePath, "old");
+            await target.UploadAsync(new BackupFile(filePath, "d.txt", new FileInfo(filePath).Length),
+                progress: null, CancellationToken.None);
+
+            await File.WriteAllTextAsync(filePath, "new content");
+            await target.UploadAsync(new BackupFile(filePath, "d.txt", new FileInfo(filePath).Length),
+                progress: null, CancellationToken.None);
+
+            var listed = (await target.ListExistingAsync(CancellationToken.None)).ToList();
+            Assert.Single(listed);
+            Assert.Equal("d.txt", listed[0].Path);
+            Assert.Equal(new FileInfo(filePath).Length, listed[0].Size);
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
+        }
+    }
+
     [Fact]
     public async Task TestConnectionAsync_WrongCredentials_ReturnsFalse()
     {
