@@ -36,7 +36,12 @@ public static class SparkVaultDatabase
                 RemotePath TEXT NULL,
                 EncryptionMode TEXT NULL,
                 PrivateKeyPath TEXT NULL,
-                EncryptedKeyPassphrase TEXT NULL
+                EncryptedKeyPassphrase TEXT NULL,
+                Endpoint TEXT NULL,
+                AccessKey TEXT NULL,
+                EncryptedSecretKey TEXT NULL,
+                Region TEXT NULL,
+                Bucket TEXT NULL
             );
 
             CREATE TABLE IF NOT EXISTS Runs (
