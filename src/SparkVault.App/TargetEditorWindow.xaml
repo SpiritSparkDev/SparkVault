@@ -1,13 +1,14 @@
 <Window x:Class="SparkVault.App.TargetEditorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Ziel bearbeiten" Height="560" Width="420" WindowStartupLocation="CenterOwner">
+        Title="Ziel bearbeiten" Height="640" Width="420" WindowStartupLocation="CenterOwner">
     <StackPanel Margin="12">
         <TextBlock Text="Zieltyp" />
         <ComboBox x:Name="TypeCombo" Margin="0,0,0,8" SelectionChanged="TypeCombo_SelectionChanged">
             <ComboBoxItem Content="Lokal / Netzlaufwerk" Tag="Local" />
             <ComboBoxItem Content="FTP" Tag="Ftp" />
             <ComboBoxItem Content="SFTP" Tag="Sftp" />
+            <ComboBoxItem Content="S3" Tag="S3" />
         </ComboBox>
 
         <StackPanel x:Name="LocalPanel">
@@ -53,6 +54,26 @@
 
             <TextBlock Text="Schlüssel-Passphrase (optional, bei Bearbeiten leer lassen = unverändert)" />
             <PasswordBox x:Name="KeyPassphraseBox" Margin="0,0,0,8" />
+        </StackPanel>
+
+        <StackPanel x:Name="S3Panel">
+            <TextBlock Text="Endpoint (leer = AWS S3)" />
+            <TextBox x:Name="EndpointBox" Margin="0,0,0,8" />
+
+            <TextBlock Text="Access Key" />
+            <TextBox x:Name="AccessKeyBox" Margin="0,0,0,8" />
+
+            <TextBlock Text="Secret Key (bei Bearbeiten leer lassen = unverändert)" />
+            <PasswordBox x:Name="SecretKeyBox" Margin="0,0,0,8" />
+
+            <TextBlock Text="Region" />
+            <TextBox x:Name="RegionBox" Margin="0,0,0,8" />
+
+            <TextBlock Text="Bucket" />
+            <TextBox x:Name="BucketBox" Margin="0,0,0,8" />
+
+            <TextBlock Text="Prefix (optional)" />
+            <TextBox x:Name="S3PrefixBox" Margin="0,0,0,8" />
         </StackPanel>
 
         <Button x:Name="TestConnectionButton" Content="Verbindung testen" Padding="8,4"

@@ -9,6 +9,7 @@ public partial class TargetEditorWindow : Window
     private readonly int? _existingId;
     private readonly string? _existingEncryptedPassword;
     private readonly string? _existingEncryptedKeyPassphrase;
+    private readonly string? _existingEncryptedSecretKey;
 
     public BackupTarget? Result { get; private set; }
 
@@ -21,6 +22,7 @@ public partial class TargetEditorWindow : Window
             _existingId = existing.Id;
             _existingEncryptedPassword = existing.EncryptedPassword;
             _existingEncryptedKeyPassphrase = existing.EncryptedKeyPassphrase;
+            _existingEncryptedSecretKey = existing.EncryptedSecretKey;
             LoadTarget(existing);
         }
         else
@@ -37,6 +39,7 @@ public partial class TargetEditorWindow : Window
             TargetType.Local => 0,
             TargetType.Ftp => 1,
             TargetType.Sftp => 2,
+            TargetType.S3 => 3,
             _ => 0,
         };
         DestinationPathBox.Text = target.DestinationPath ?? "";
@@ -51,7 +54,12 @@ public partial class TargetEditorWindow : Window
             _ => 0,
         };
         PrivateKeyPathBox.Text = target.PrivateKeyPath ?? "";
-        // PasswordBox/KeyPassphraseBox stay blank on load by design — an empty field on save
+        EndpointBox.Text = target.Endpoint ?? "";
+        AccessKeyBox.Text = target.AccessKey ?? "";
+        RegionBox.Text = target.Region ?? "";
+        BucketBox.Text = target.Bucket ?? "";
+        S3PrefixBox.Text = target.Type == TargetType.S3 ? target.RemotePath ?? "" : "";
+        // PasswordBox/KeyPassphraseBox/SecretKeyBox stay blank on load by design — an empty field on save
         // means "keep the existing encrypted credential" (see BuildTargetFromForm), so we
         // never need to (and never could, without the DPAPI user context) show the plaintext.
     }
@@ -61,11 +69,13 @@ public partial class TargetEditorWindow : Window
         var isLocal = TypeCombo.SelectedIndex == 0;
         var isFtp = TypeCombo.SelectedIndex == 1;
         var isSftp = TypeCombo.SelectedIndex == 2;
+        var isS3 = TypeCombo.SelectedIndex == 3;
 
         LocalPanel.Visibility = isLocal ? Visibility.Visible : Visibility.Collapsed;
-        RemotePanel.Visibility = isLocal ? Visibility.Collapsed : Visibility.Visible;
+        RemotePanel.Visibility = (isFtp || isSftp) ? Visibility.Visible : Visibility.Collapsed;
         FtpOnlyPanel.Visibility = isFtp ? Visibility.Visible : Visibility.Collapsed;
         SftpOnlyPanel.Visibility = isSftp ? Visibility.Visible : Visibility.Collapsed;
+        S3Panel.Visibility = isS3 ? Visibility.Visible : Visibility.Collapsed;
         TestConnectionButton.Visibility = isLocal ? Visibility.Collapsed : Visibility.Visible;
     }
 
@@ -89,6 +99,7 @@ public partial class TargetEditorWindow : Window
         {
             1 => TargetType.Ftp,
             2 => TargetType.Sftp,
+            3 => TargetType.S3,
             _ => TargetType.Local,
         };
 
@@ -102,6 +113,36 @@ public partial class TargetEditorWindow : Window
                 return null;
             }
             target.DestinationPath = DestinationPathBox.Text.Trim();
+            return target;
+        }
+
+        if (type == TargetType.S3)
+        {
+            if (string.IsNullOrWhiteSpace(AccessKeyBox.Text))
+            {
+                MessageBox.Show(this, "Bitte einen Access Key angeben.", "SparkVault", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return null;
+            }
+            if (string.IsNullOrWhiteSpace(RegionBox.Text))
+            {
+                MessageBox.Show(this, "Bitte eine Region angeben.", "SparkVault", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return null;
+            }
+            if (string.IsNullOrWhiteSpace(BucketBox.Text))
+            {
+                MessageBox.Show(this, "Bitte einen Bucket angeben.", "SparkVault", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return null;
+            }
+
+            target.Endpoint = string.IsNullOrWhiteSpace(EndpointBox.Text) ? null : EndpointBox.Text.Trim();
+            target.AccessKey = AccessKeyBox.Text.Trim();
+            target.Region = RegionBox.Text.Trim();
+            target.Bucket = BucketBox.Text.Trim();
+            target.RemotePath = S3PrefixBox.Text.Trim();
+            target.EncryptedSecretKey = SecretKeyBox.Password.Length > 0
+                ? CredentialProtector.Protect(SecretKeyBox.Password)
+                : _existingEncryptedSecretKey;
+
             return target;
         }
 
