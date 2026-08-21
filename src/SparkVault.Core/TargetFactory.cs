@@ -7,6 +7,7 @@ public static class TargetFactory
         TargetType.Local => new LocalTarget(config.DestinationPath ?? throw new InvalidOperationException("Local target requires DestinationPath.")),
         TargetType.Ftp => new FtpTarget(config),
         TargetType.Sftp => new SftpTarget(config),
+        TargetType.S3 => new S3Target(config),
         _ => throw new NotSupportedException($"Unbekannter Zieltyp: {config.Type}"),
     };
 }

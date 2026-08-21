@@ -43,6 +43,25 @@ public class TargetFactoryTests
     }
 
     [Fact]
+    public async Task Create_S3_ReturnsS3Target()
+    {
+        var config = new BackupTarget
+        {
+            Type = TargetType.S3,
+            Bucket = "b",
+            AccessKey = "a",
+            EncryptedSecretKey = CredentialProtector.Protect("s"),
+            Region = "us-east-1",
+            Endpoint = "http://localhost:9000",
+            RemotePath = "/x",
+        };
+
+        await using var target = TargetFactory.Create(config);
+
+        Assert.IsType<S3Target>(target);
+    }
+
+    [Fact]
     public void Create_Local_WithoutDestinationPath_Throws()
     {
         var config = new BackupTarget { Type = TargetType.Local, DestinationPath = null };
