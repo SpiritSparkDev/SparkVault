@@ -13,6 +13,7 @@ public static class BackupTargetExtensions
         TargetType.Local => $"Lokal: {target.DestinationPath}",
         TargetType.Ftp => $"FTP: {target.Host}",
         TargetType.Sftp => $"SFTP: {target.Host}",
+        TargetType.S3 => $"S3: {target.Bucket}",
     };
 #pragma warning restore CS8524
 }

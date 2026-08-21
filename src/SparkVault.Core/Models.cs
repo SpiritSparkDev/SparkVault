@@ -2,7 +2,7 @@ namespace SparkVault.Core;
 
 public enum ScheduleType { None, Interval, DailyAt }
 
-public enum TargetType { Local, Ftp, Sftp }
+public enum TargetType { Local, Ftp, Sftp, S3 }
 
 public enum FtpEncryption { None, Explicit, Implicit }
 
@@ -28,6 +28,13 @@ public sealed class BackupTarget
     // Sftp only
     public string? PrivateKeyPath { get; set; }
     public string? EncryptedKeyPassphrase { get; set; }
+
+    // S3 only. Prefix reuses RemotePath (same "destination-relative subfolder" meaning).
+    public string? Endpoint { get; set; }
+    public string? AccessKey { get; set; }
+    public string? EncryptedSecretKey { get; set; }
+    public string? Region { get; set; }
+    public string? Bucket { get; set; }
 }
 
 public sealed class BackupJob
