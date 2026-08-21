@@ -170,4 +170,43 @@ public class BackupTargetRepositoryTests
             if (File.Exists(dbPath)) File.Delete(dbPath);
         }
     }
+
+    [Fact]
+    public void AddThenGetByJobId_RoundTripsS3TargetAllFields()
+    {
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var repo = new BackupTargetRepository(connectionString);
+
+            var target = new BackupTarget
+            {
+                JobId = 4,
+                Type = TargetType.S3,
+                Endpoint = "http://127.0.0.1:9000",
+                AccessKey = "minioadmin",
+                EncryptedSecretKey = "ZW5jcnlwdGVk",
+                Region = "us-east-1",
+                Bucket = "sparkvault",
+                RemotePath = "backups/job1",
+            };
+            repo.Add(target);
+
+            var loaded = repo.GetByJobId(4).Single();
+            Assert.Equal(TargetType.S3, loaded.Type);
+            Assert.Equal("http://127.0.0.1:9000", loaded.Endpoint);
+            Assert.Equal("minioadmin", loaded.AccessKey);
+            Assert.Equal("ZW5jcnlwdGVk", loaded.EncryptedSecretKey);
+            Assert.Equal("us-east-1", loaded.Region);
+            Assert.Equal("sparkvault", loaded.Bucket);
+            Assert.Equal("backups/job1", loaded.RemotePath);
+            Assert.Null(loaded.Host);
+            Assert.Null(loaded.DestinationPath);
+        }
+        finally
+        {
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
 }

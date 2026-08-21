@@ -19,9 +19,11 @@ public sealed class BackupTargetRepository
         var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO Targets (JobId, Type, DestinationPath, Host, Port, Username, EncryptedPassword,
-                                  RemotePath, EncryptionMode, PrivateKeyPath, EncryptedKeyPassphrase)
+                                  RemotePath, EncryptionMode, PrivateKeyPath, EncryptedKeyPassphrase,
+                                  Endpoint, AccessKey, EncryptedSecretKey, Region, Bucket)
             VALUES ($jobId, $type, $destPath, $host, $port, $username, $password,
-                    $remotePath, $encMode, $keyPath, $keyPassphrase);
+                    $remotePath, $encMode, $keyPath, $keyPassphrase,
+                    $endpoint, $accessKey, $secretKey, $region, $bucket);
             SELECT last_insert_rowid();
             """;
         BindTargetParameters(command, target);
@@ -39,7 +41,9 @@ public sealed class BackupTargetRepository
             UPDATE Targets
             SET JobId = $jobId, Type = $type, DestinationPath = $destPath, Host = $host, Port = $port,
                 Username = $username, EncryptedPassword = $password, RemotePath = $remotePath,
-                EncryptionMode = $encMode, PrivateKeyPath = $keyPath, EncryptedKeyPassphrase = $keyPassphrase
+                EncryptionMode = $encMode, PrivateKeyPath = $keyPath, EncryptedKeyPassphrase = $keyPassphrase,
+                Endpoint = $endpoint, AccessKey = $accessKey, EncryptedSecretKey = $secretKey,
+                Region = $region, Bucket = $bucket
             WHERE Id = $id;
             """;
         BindTargetParameters(command, target);
@@ -88,6 +92,11 @@ public sealed class BackupTargetRepository
         command.Parameters.AddWithValue("$encMode", target.EncryptionMode is { } mode ? mode.ToString() : (object)DBNull.Value);
         command.Parameters.AddWithValue("$keyPath", (object?)target.PrivateKeyPath ?? DBNull.Value);
         command.Parameters.AddWithValue("$keyPassphrase", (object?)target.EncryptedKeyPassphrase ?? DBNull.Value);
+        command.Parameters.AddWithValue("$endpoint", (object?)target.Endpoint ?? DBNull.Value);
+        command.Parameters.AddWithValue("$accessKey", (object?)target.AccessKey ?? DBNull.Value);
+        command.Parameters.AddWithValue("$secretKey", (object?)target.EncryptedSecretKey ?? DBNull.Value);
+        command.Parameters.AddWithValue("$region", (object?)target.Region ?? DBNull.Value);
+        command.Parameters.AddWithValue("$bucket", (object?)target.Bucket ?? DBNull.Value);
     }
 
     private static BackupTarget ReadTarget(SqliteDataReader reader)
@@ -109,6 +118,11 @@ public sealed class BackupTargetRepository
             EncryptionMode = GetNullableString("EncryptionMode") is { } m ? Enum.Parse<FtpEncryption>(m) : null,
             PrivateKeyPath = GetNullableString("PrivateKeyPath"),
             EncryptedKeyPassphrase = GetNullableString("EncryptedKeyPassphrase"),
+            Endpoint = GetNullableString("Endpoint"),
+            AccessKey = GetNullableString("AccessKey"),
+            EncryptedSecretKey = GetNullableString("EncryptedSecretKey"),
+            Region = GetNullableString("Region"),
+            Bucket = GetNullableString("Bucket"),
         };
     }
 }
