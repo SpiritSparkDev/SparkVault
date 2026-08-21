@@ -337,4 +337,51 @@ public class BackupRunnerTests
             if (File.Exists(dbPath)) File.Delete(dbPath);
         }
     }
+
+    [Fact]
+    public async Task RunAsync_AllFourTargetTypesTogether_AllSucceed()
+    {
+        const string host = "127.0.0.1";
+        if (!DockerTestHelper.IsReachable(host, 2121) || !DockerTestHelper.IsReachable(host, 2222) || !DockerTestHelper.IsReachable(host, 9000)) return;
+
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-src-");
+        var destDir = Directory.CreateTempSubdirectory("sparkvault-dest-");
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        var suffix = Guid.NewGuid().ToString("N");
+        try
+        {
+            File.WriteAllText(Path.Combine(srcDir.FullName, "a.txt"), "hello");
+
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var jobRepo = new JobRepository(connectionString);
+            var jobId = jobRepo.Add(new BackupJob
+            {
+                Name = "Test",
+                SourcePath = srcDir.FullName,
+                Targets = new List<BackupTarget>
+                {
+                    new() { Type = TargetType.Local, DestinationPath = destDir.FullName },
+                    new() { Type = TargetType.Ftp, Host = host, Port = 2121, Username = "testuser", EncryptedPassword = CredentialProtector.Protect("testpass"), EncryptionMode = FtpEncryption.None, RemotePath = $"/four-{suffix}" },
+                    new() { Type = TargetType.Sftp, Host = host, Port = 2222, Username = "testuser", EncryptedPassword = CredentialProtector.Protect("testpass"), RemotePath = $"/upload/four-{suffix}" },
+                    new() { Type = TargetType.S3, Endpoint = "http://127.0.0.1:9000", AccessKey = "minioadmin", EncryptedSecretKey = CredentialProtector.Protect("minioadmin"), Region = "us-east-1", Bucket = $"four-{suffix}", RemotePath = "" },
+                },
+            });
+            var job = jobRepo.GetById(jobId)!;
+
+            var runRepo = new RunRepository(connectionString);
+            var runner = new BackupRunner(runRepo, Log.Logger);
+
+            var results = await runner.RunAsync(job, progress: null, CancellationToken.None);
+
+            Assert.Equal(4, results.Count);
+            Assert.All(results, r => Assert.Equal(RunStatus.Success, r.Status));
+            Assert.True(File.Exists(Path.Combine(destDir.FullName, "a.txt")));
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
+            destDir.Delete(recursive: true);
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
 }
