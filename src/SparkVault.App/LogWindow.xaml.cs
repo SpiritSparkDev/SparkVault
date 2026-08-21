@@ -13,7 +13,7 @@ public partial class LogWindow : Window
         Title = $"Log – {jobName}";
 
         var targetsById = (App.JobRepository.GetById(jobId)?.Targets ?? new List<BackupTarget>())
-            .ToDictionary(t => t.Id, DescribeTarget);
+            .ToDictionary(t => t.Id, t => t.Describe());
 
         RunsGrid.ItemsSource = App.RunRepository.GetByJobId(jobId)
             .Select(r => new RunRow(
@@ -23,12 +23,4 @@ public partial class LogWindow : Window
                 r.Status, r.FileCount, r.TotalBytes, r.ErrorMessage))
             .ToList();
     }
-
-    private static string DescribeTarget(BackupTarget target) => target.Type switch
-    {
-        TargetType.Local => $"Lokal: {target.DestinationPath}",
-        TargetType.Ftp => $"FTP: {target.Host}",
-        TargetType.Sftp => $"SFTP: {target.Host}",
-        _ => target.Type.ToString(),
-    };
 }

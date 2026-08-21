@@ -45,7 +45,7 @@ public partial class MainWindow : Window
                 Id = job.Id,
                 Name = job.Name,
                 SourcePath = job.SourcePath,
-                TargetsDisplay = string.Join("; ", job.Targets.Select(DescribeTarget)),
+                TargetsDisplay = string.Join("; ", job.Targets.Select(t => t.Describe())),
                 LastRunDisplay = lastRunStartedAt?.ToLocalTime().ToString("g") ?? "-",
                 NextRunDisplay = DescribeNextRun(job, lastRunStartedAt),
                 LastStatusDisplay = lastStatus?.ToString() ?? "-",
@@ -70,14 +70,6 @@ public partial class MainWindow : Window
                 return "-";
         }
     }
-
-    private static string DescribeTarget(BackupTarget target) => target.Type switch
-    {
-        TargetType.Local => $"Lokal: {target.DestinationPath}",
-        TargetType.Ftp => $"FTP: {target.Host}",
-        TargetType.Sftp => $"SFTP: {target.Host}",
-        _ => target.Type.ToString(),
-    };
 
     private JobRow? SelectedJob => JobsGrid.SelectedItem as JobRow;
 

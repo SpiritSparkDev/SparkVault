@@ -12,13 +12,7 @@ public partial class JobEditorWindow : Window
     {
         public required BackupTarget Target { get; init; }
 
-        public string Description => Target.Type switch
-        {
-            TargetType.Local => $"Lokal: {Target.DestinationPath}",
-            TargetType.Ftp => $"FTP: {Target.Host}",
-            TargetType.Sftp => $"SFTP: {Target.Host}",
-            _ => Target.Type.ToString(),
-        };
+        public string Description => Target.Describe();
     }
 
     private readonly int? _jobId;
