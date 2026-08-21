@@ -24,6 +24,20 @@ public class S3TargetTests
     };
 
     [Fact]
+    public void Constructor_NoEndpoint_DoesNotThrow()
+    {
+        var target = new S3Target(new BackupTarget
+        {
+            Type = TargetType.S3,
+            Bucket = "b",
+            AccessKey = "a",
+            Region = "eu-central-1",
+            EncryptedSecretKey = CredentialProtector.Protect("s"),
+        });
+        Assert.NotNull(target);
+    }
+
+    [Fact]
     public async Task UploadAsync_UploadsVerifiesAndListsFile()
     {
         if (!DockerTestHelper.IsReachable("127.0.0.1", Port)) return;

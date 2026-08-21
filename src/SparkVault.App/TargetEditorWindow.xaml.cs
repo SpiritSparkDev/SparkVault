@@ -133,12 +133,17 @@ public partial class TargetEditorWindow : Window
                 MessageBox.Show(this, "Bitte einen Bucket angeben.", "SparkVault", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return null;
             }
+            if (SecretKeyBox.Password.Length == 0 && _existingEncryptedSecretKey is null)
+            {
+                MessageBox.Show(this, "Bitte einen Secret Key angeben.", "SparkVault", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return null;
+            }
 
             target.Endpoint = string.IsNullOrWhiteSpace(EndpointBox.Text) ? null : EndpointBox.Text.Trim();
             target.AccessKey = AccessKeyBox.Text.Trim();
             target.Region = RegionBox.Text.Trim();
             target.Bucket = BucketBox.Text.Trim();
-            target.RemotePath = S3PrefixBox.Text.Trim();
+            target.RemotePath = S3PrefixBox.Text.Trim().TrimStart('/');
             target.EncryptedSecretKey = SecretKeyBox.Password.Length > 0
                 ? CredentialProtector.Protect(SecretKeyBox.Password)
                 : _existingEncryptedSecretKey;

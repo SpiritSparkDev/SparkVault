@@ -20,14 +20,16 @@ public sealed class S3Target : IBackupTarget
             ? ""
             : CredentialProtector.Unprotect(config.EncryptedSecretKey);
 
-        var s3Config = new AmazonS3Config
-        {
-            AuthenticationRegion = region,
-        };
+        var s3Config = new AmazonS3Config();
         if (!string.IsNullOrEmpty(config.Endpoint))
         {
             s3Config.ServiceURL = config.Endpoint;
             s3Config.ForcePathStyle = true;
+            s3Config.AuthenticationRegion = region;
+        }
+        else
+        {
+            s3Config.RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(region);
         }
 
         _client = new AmazonS3Client(accessKey, secretKey, s3Config);
@@ -92,8 +94,6 @@ public sealed class S3Target : IBackupTarget
 
         if (head.ContentLength != file.Size)
         {
-            try { await _client.DeleteObjectAsync(new DeleteObjectRequest { BucketName = _bucket, Key = key }, CancellationToken.None); }
-            catch { /* best effort cleanup */ }
             throw new IOException(
                 $"Verifikation fehlgeschlagen für {file.RelativePath}: erwartet {file.Size} Bytes, erhalten {head.ContentLength}.");
         }
@@ -103,16 +103,27 @@ public sealed class S3Target : IBackupTarget
     {
         await EnsureBucketAsync(ct);
 
-        var response = await _client.ListObjectsV2Async(new ListObjectsV2Request
-        {
-            BucketName = _bucket,
-            Prefix = _prefix,
-        }, ct);
-
         var rootPrefix = _prefix.TrimEnd('/') + "/";
-        return (response.S3Objects ?? new List<S3Object>()).Select(o => new RemoteFileInfo(
-            o.Key.StartsWith(rootPrefix, StringComparison.Ordinal) ? o.Key[rootPrefix.Length..] : o.Key,
-            o.Size ?? 0));
+        var results = new List<RemoteFileInfo>();
+        string? continuationToken = null;
+
+        do
+        {
+            var response = await _client.ListObjectsV2Async(new ListObjectsV2Request
+            {
+                BucketName = _bucket,
+                Prefix = rootPrefix == "/" ? _prefix : rootPrefix,
+                ContinuationToken = continuationToken,
+            }, ct);
+
+            results.AddRange((response.S3Objects ?? new List<S3Object>()).Select(o => new RemoteFileInfo(
+                o.Key.StartsWith(rootPrefix, StringComparison.Ordinal) ? o.Key[rootPrefix.Length..] : o.Key,
+                o.Size ?? 0)));
+
+            continuationToken = response.IsTruncated == true ? response.NextContinuationToken : null;
+        } while (continuationToken is not null);
+
+        return results;
     }
 
     public async Task DeleteAsync(string remotePath, CancellationToken ct)
