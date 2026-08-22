@@ -9,10 +9,13 @@
             <Button x:Name="EditJobButton" Content="Bearbeiten" Padding="8,4" Margin="8,0,0,0" Click="EditJobButton_Click" />
             <Button x:Name="DeleteJobButton" Content="Löschen" Padding="8,4" Margin="8,0,0,0" Click="DeleteJobButton_Click" />
             <Button x:Name="RunNowButton" Content="Jetzt sichern" Padding="8,4" Margin="8,0,0,0" Click="RunNowButton_Click" />
+            <Button x:Name="CancelButton" Content="Abbrechen" Padding="8,4" Margin="8,0,0,0" Click="CancelButton_Click" IsEnabled="False" />
             <Button x:Name="ShowLogButton" Content="Log anzeigen" Padding="8,4" Margin="8,0,0,0" Click="ShowLogButton_Click" />
             <ProgressBar x:Name="RunProgressBar" Width="160" Height="18" Margin="16,4,0,0" Minimum="0" Maximum="100" />
+            <TextBlock x:Name="CurrentFileText" Margin="8,4,0,0" VerticalAlignment="Center" />
         </StackPanel>
-        <DataGrid x:Name="JobsGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single">
+        <DataGrid x:Name="JobsGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
+                  MouseDoubleClick="JobsGrid_MouseDoubleClick">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="150" />
                 <DataGridTextColumn Header="Quelle" Binding="{Binding SourcePath}" Width="200" />

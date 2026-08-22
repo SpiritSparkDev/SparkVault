@@ -20,6 +20,7 @@ public sealed class JobRow
 public partial class MainWindow : Window
 {
     private readonly ObservableCollection<JobRow> _jobs = new();
+    private CancellationTokenSource? _runCts;
 
     public MainWindow()
     {
@@ -107,20 +108,40 @@ public partial class MainWindow : Window
         if (job is null) return;
 
         RunNowButton.IsEnabled = false;
+        CancelButton.IsEnabled = true;
         RunProgressBar.Value = 0;
+        CurrentFileText.Text = "";
+        _runCts = new CancellationTokenSource();
         var progress = new Progress<TransferProgress>(p =>
-            RunProgressBar.Value = p.FilesTotal == 0 ? 0 : (double)p.FilesDone / p.FilesTotal * 100);
+        {
+            RunProgressBar.Value = p.FilesTotal == 0 ? 0 : (double)p.FilesDone / p.FilesTotal * 100;
+            CurrentFileText.Text = p.CurrentFile;
+        });
 
         try
         {
-            await App.Runner.RunAsync(job, progress, CancellationToken.None);
+            await App.Runner.RunAsync(job, progress, _runCts.Token);
         }
         finally
         {
             RunNowButton.IsEnabled = true;
+            CancelButton.IsEnabled = false;
             RunProgressBar.Value = 0;
+            CurrentFileText.Text = "";
+            _runCts.Dispose();
+            _runCts = null;
             ReloadJobs();
         }
+    }
+
+    private void CancelButton_Click(object sender, RoutedEventArgs e)
+    {
+        _runCts?.Cancel();
+    }
+
+    private void JobsGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        EditJobButton_Click(sender, e);
     }
 
     private void ShowLogButton_Click(object sender, RoutedEventArgs e)
