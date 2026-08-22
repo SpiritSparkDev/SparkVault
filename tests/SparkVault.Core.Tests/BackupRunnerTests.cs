@@ -351,6 +351,9 @@ public class BackupRunnerTests
         try
         {
             File.WriteAllText(Path.Combine(srcDir.FullName, "a.txt"), "hello");
+            // S3Target no longer creates buckets itself — simulate the user having already
+            // created it with their provider.
+            await S3TargetTests.CreateBucketAsync($"four-{suffix}");
 
             SparkVaultDatabase.EnsureCreated(connectionString);
             var jobRepo = new JobRepository(connectionString);

@@ -1,3 +1,5 @@
+using Amazon.S3;
+using Amazon.S3.Model;
 using SparkVault.Core;
 using Xunit;
 
@@ -22,6 +24,22 @@ public class S3TargetTests
         Bucket = $"sparkvault-test-{Guid.NewGuid():N}",
         RemotePath = "backups",
     };
+
+    // S3Target no longer creates buckets itself (users provide credentials for a bucket their
+    // provider already created). Tests simulate that by creating the bucket directly via the
+    // SDK, bypassing S3Target, before exercising the target against it.
+    private static AmazonS3Client NewRawClient() => new("minioadmin", "minioadmin", new AmazonS3Config
+    {
+        ServiceURL = Endpoint,
+        ForcePathStyle = true,
+        AuthenticationRegion = "us-east-1",
+    });
+
+    internal static async Task CreateBucketAsync(string bucket)
+    {
+        using var client = NewRawClient();
+        await client.PutBucketAsync(new PutBucketRequest { BucketName = bucket });
+    }
 
     [Fact]
     public void Constructor_NoEndpoint_DoesNotThrow()
@@ -49,7 +67,9 @@ public class S3TargetTests
             await File.WriteAllTextAsync(filePath, "hello s3");
             var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length);
 
-            await using var target = new S3Target(NewTestConfig());
+            var config = NewTestConfig();
+            await CreateBucketAsync(config.Bucket!);
+            await using var target = new S3Target(config);
 
             Assert.True(await target.TestConnectionAsync(CancellationToken.None));
             await target.UploadAsync(file, progress: null, CancellationToken.None);
@@ -80,7 +100,9 @@ public class S3TargetTests
             // RelativePath uses a Windows-style backslash, exactly what FileScanner produces on Windows.
             var file = new BackupFile(filePath, "sub\\b.txt", new FileInfo(filePath).Length);
 
-            await using var target = new S3Target(NewTestConfig());
+            var config = NewTestConfig();
+            await CreateBucketAsync(config.Bucket!);
+            await using var target = new S3Target(config);
             await target.UploadAsync(file, progress: null, CancellationToken.None);
 
             var listed = (await target.ListExistingAsync(CancellationToken.None)).ToList();
@@ -104,7 +126,9 @@ public class S3TargetTests
             await File.WriteAllTextAsync(filePath, "cancel me");
             var file = new BackupFile(filePath, "c.txt", new FileInfo(filePath).Length);
 
-            await using var target = new S3Target(NewTestConfig());
+            var config = NewTestConfig();
+            await CreateBucketAsync(config.Bucket!);
+            await using var target = new S3Target(config);
             using var cts = new CancellationTokenSource();
             cts.Cancel();
 
@@ -126,10 +150,26 @@ public class S3TargetTests
         if (!DockerTestHelper.IsReachable("127.0.0.1", Port)) return;
 
         var config = NewTestConfig();
+        await CreateBucketAsync(config.Bucket!);
         config.EncryptedSecretKey = CredentialProtector.Protect("wrong-secret");
 
         await using var target = new S3Target(config);
 
         Assert.False(await target.TestConnectionAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task TestConnectionAsync_BucketDoesNotExist_ReturnsFalseAndDoesNotCreateIt()
+    {
+        if (!DockerTestHelper.IsReachable("127.0.0.1", Port)) return;
+
+        var config = NewTestConfig(); // fresh guid bucket, deliberately never created
+
+        await using var target = new S3Target(config);
+        Assert.False(await target.TestConnectionAsync(CancellationToken.None));
+
+        using var client = NewRawClient();
+        await Assert.ThrowsAsync<AmazonS3Exception>(
+            () => client.GetBucketLocationAsync(new GetBucketLocationRequest { BucketName = config.Bucket! }));
     }
 }

@@ -53,7 +53,8 @@ public sealed class S3Target : IBackupTarget
         if (_bucketEnsured) return;
 
         if (!await BucketExistsAsync(ct))
-            await _client.PutBucketAsync(new PutBucketRequest { BucketName = _bucket }, ct);
+            throw new InvalidOperationException(
+                $"S3-Bucket '{_bucket}' existiert nicht oder ist mit diesen Zugangsdaten nicht sichtbar. Bitte den Bucket beim Anbieter anlegen.");
 
         _bucketEnsured = true;
     }
