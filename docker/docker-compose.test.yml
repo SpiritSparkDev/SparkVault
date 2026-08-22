@@ -4,6 +4,7 @@ services:
     environment:
       FTP_USER: testuser
       FTP_PASS: testpass
+      PUBLICHOST: 127.0.0.1
     ports:
       - "2121:21"
       - "40000-40009:40000-40009"
