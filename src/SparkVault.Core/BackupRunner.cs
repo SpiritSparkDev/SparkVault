@@ -37,7 +37,9 @@ public sealed class BackupRunner
             IReadOnlyList<BackupFile> files = Array.Empty<BackupFile>();
             try
             {
-                files = FileScanner.Scan(job.SourcePath, job.ExcludePatterns);
+                var scanned = FileScanner.Scan(job.SourcePath, job.ExcludePatterns);
+                var jobFolder = SanitizeForPath(job.Name);
+                files = scanned.Select(f => f with { RelativePath = $"{jobFolder}\\{f.RelativePath}" }).ToList();
             }
             catch (Exception ex)
             {
@@ -109,10 +111,11 @@ public sealed class BackupRunner
             foreach (var file in files)
             {
                 ct.ThrowIfCancellationRequested();
+                progress?.Report(new TransferProgress(done, files.Count, bytesDone, totalBytes, file.RelativePath));
                 await target.UploadAsync(file, progress, ct);
                 done++;
                 bytesDone += file.Size;
-                progress?.Report(new TransferProgress(done, files.Count, bytesDone, totalBytes));
+                progress?.Report(new TransferProgress(done, files.Count, bytesDone, totalBytes, file.RelativePath));
             }
 
             run.Status = RunStatus.Success;
@@ -140,6 +143,16 @@ public sealed class BackupRunner
         }
 
         return run;
+    }
+
+    // Every file lands under a job-named subfolder on every target type, so multiple jobs
+    // sharing the same physical destination (same FTP account, same S3 bucket, etc.) never
+    // collide. Path.GetInvalidFileNameChars() also covers '/' and '\', so a job name can't
+    // sneak in extra path segments.
+    private static string SanitizeForPath(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        return new string(name.Select(c => invalid.Contains(c) ? '_' : c).ToArray()).Trim();
     }
 
     private BackupRun RecordImmediateFailure(BackupJob job, BackupTarget targetConfig, Guid runGroupId, string errorMessage)

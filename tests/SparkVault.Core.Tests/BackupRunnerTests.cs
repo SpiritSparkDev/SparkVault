@@ -42,8 +42,8 @@ public class BackupRunnerTests
             Assert.Equal(RunStatus.Success, results[0].Status);
             Assert.Equal(2, results[0].FileCount);
             Assert.Equal(11, results[0].TotalBytes);
-            Assert.True(File.Exists(Path.Combine(destDir.FullName, "a.txt")));
-            Assert.True(File.Exists(Path.Combine(destDir.FullName, "b.txt")));
+            Assert.True(File.Exists(Path.Combine(destDir.FullName, "Test", "a.txt")));
+            Assert.True(File.Exists(Path.Combine(destDir.FullName, "Test", "b.txt")));
         }
         finally
         {
@@ -89,8 +89,8 @@ public class BackupRunnerTests
             Assert.Single(groupIds);
             var targetIds = results.Select(r => r.TargetId).Distinct().ToList();
             Assert.Equal(2, targetIds.Count);
-            Assert.True(File.Exists(Path.Combine(destDir1.FullName, "a.txt")));
-            Assert.True(File.Exists(Path.Combine(destDir2.FullName, "a.txt")));
+            Assert.True(File.Exists(Path.Combine(destDir1.FullName, "Test", "a.txt")));
+            Assert.True(File.Exists(Path.Combine(destDir2.FullName, "Test", "a.txt")));
         }
         finally
         {
@@ -134,7 +134,7 @@ public class BackupRunnerTests
             Assert.Equal(2, results.Count);
             Assert.Equal(RunStatus.Failed, results[0].Status);
             Assert.Equal(RunStatus.Success, results[1].Status);
-            Assert.True(File.Exists(Path.Combine(destDirOk.FullName, "a.txt")));
+            Assert.True(File.Exists(Path.Combine(destDirOk.FullName, "Test", "a.txt")));
         }
         finally
         {
@@ -232,7 +232,12 @@ public class BackupRunnerTests
     {
         private readonly CancellationTokenSource _cts;
         public CancelOnFirstReport(CancellationTokenSource cts) => _cts = cts;
-        public void Report(TransferProgress value) => _cts.Cancel();
+        // Now reported twice per file (before and after upload) — only the after-upload report
+        // (FilesDone > 0) matches "cancels once the first target finishes its first file".
+        public void Report(TransferProgress value)
+        {
+            if (value.FilesDone > 0) _cts.Cancel();
+        }
     }
 
     [Fact]
@@ -328,7 +333,7 @@ public class BackupRunnerTests
 
             Assert.Equal(3, results.Count);
             Assert.All(results, r => Assert.Equal(RunStatus.Success, r.Status));
-            Assert.True(File.Exists(Path.Combine(destDir.FullName, "a.txt")));
+            Assert.True(File.Exists(Path.Combine(destDir.FullName, "Test", "a.txt")));
         }
         finally
         {
@@ -378,7 +383,7 @@ public class BackupRunnerTests
 
             Assert.Equal(4, results.Count);
             Assert.All(results, r => Assert.Equal(RunStatus.Success, r.Status));
-            Assert.True(File.Exists(Path.Combine(destDir.FullName, "a.txt")));
+            Assert.True(File.Exists(Path.Combine(destDir.FullName, "Test", "a.txt")));
         }
         finally
         {
