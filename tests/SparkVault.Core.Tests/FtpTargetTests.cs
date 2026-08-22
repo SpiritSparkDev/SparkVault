@@ -55,6 +55,31 @@ public class FtpTargetTests
     }
 
     [Fact]
+    public async Task UploadAsync_DotfileName_UploadsSuccessfully()
+    {
+        if (!DockerTestHelper.IsReachable(Host, Port)) return;
+
+        // Regression: the test server (pure-ftpd-based) hides dotfiles from LIST, and
+        // GetObjectInfo falls back to a LIST-based lookup when MLST isn't supported (this
+        // server doesn't support it), so verification used to fail with "erhalten -1" for any
+        // dotfile-named upload (e.g. a real .gitignore in a backed-up source tree).
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-ftp-src-");
+        try
+        {
+            var filePath = Path.Combine(srcDir.FullName, ".gitignore");
+            await File.WriteAllTextAsync(filePath, "bin/\nobj/\n");
+            var file = new BackupFile(filePath, ".gitignore", new FileInfo(filePath).Length);
+
+            await using var target = new FtpTarget(NewTestConfig());
+            await target.UploadAsync(file, progress: null, CancellationToken.None);
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task UploadAsync_NestedRelativePath_CreatesSubfolder()
     {
         if (!DockerTestHelper.IsReachable(Host, Port)) return;

@@ -65,10 +65,13 @@ public sealed class FtpTarget : IBackupTarget
             if (status != FtpStatus.Success)
                 throw new IOException($"FTP-Upload fehlgeschlagen für {file.RelativePath}: {status}");
 
-            var info = await _client.GetObjectInfo(tempPath, token: ct);
-            if (info is null || info.Size != file.Size)
+            // GetObjectInfo falls back to a LIST-based lookup when the server doesn't support
+            // MLST (this project's test server doesn't), and LIST hides dotfiles by Unix
+            // convention — GetFileSize issues SIZE directly and isn't affected.
+            var size = await _client.GetFileSize(tempPath, token: ct);
+            if (size != file.Size)
                 throw new IOException(
-                    $"Verifikation fehlgeschlagen für {file.RelativePath}: erwartet {file.Size} Bytes, erhalten {info?.Size ?? -1}.");
+                    $"Verifikation fehlgeschlagen für {file.RelativePath}: erwartet {file.Size} Bytes, erhalten {size}.");
 
             // ponytail: FTP has no atomic replace-on-rename (unlike SFTP's isPosix rename). A kill
             // between DeleteFile and Rename below leaves no file at finalPath — narrow window,
