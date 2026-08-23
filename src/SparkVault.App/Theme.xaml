@@ -306,6 +306,31 @@
         <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}"/>
     </Style>
 
+    <!-- ListBoxItem: same bug class as ComboBoxItem above — default chrome ignores the theme,
+         leaving items in undyed (effectively black-on-dark) system text. Any ListBox that
+         doesn't define its own ItemContainerStyle (e.g. SettingsTargetsListBox) picks this up. -->
+    <Style TargetType="ListBoxItem">
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border x:Name="Bd" Background="Transparent" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Accent100Brush}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Accent100Brush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ScrollViewer's default chrome paints an opaque (near-white) background that would
          otherwise hide the Window background behind any scrollable panel. -->
     <Style TargetType="ScrollViewer">

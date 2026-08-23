@@ -310,10 +310,25 @@
                     <ComboBox x:Name="SettingsScheduleTypeCombo" Margin="0,0,0,8" SelectionChanged="SettingsScheduleTypeCombo_SelectionChanged">
                         <ComboBoxItem Content="Manuell"/>
                         <ComboBoxItem Content="Intervall (Stunden)"/>
-                        <ComboBoxItem Content="Täglich um"/>
+                        <ComboBoxItem Content="Täglich"/>
+                        <ComboBoxItem Content="Werktags (Mo-Fr)"/>
+                        <ComboBoxItem Content="Wöchentlich"/>
+                        <ComboBoxItem Content="Monatlich"/>
                     </ComboBox>
                     <TextBlock x:Name="SettingsIntervalLabel" Text="Intervall in Stunden" Margin="0,0,0,4"/>
                     <TextBox x:Name="SettingsIntervalHoursBox" Margin="0,0,0,14"/>
+                    <TextBlock x:Name="SettingsWeeklyDayLabel" Text="Wochentag" Margin="0,0,0,4"/>
+                    <ComboBox x:Name="SettingsWeeklyDayCombo" Margin="0,0,0,14">
+                        <ComboBoxItem Content="Montag"/>
+                        <ComboBoxItem Content="Dienstag"/>
+                        <ComboBoxItem Content="Mittwoch"/>
+                        <ComboBoxItem Content="Donnerstag"/>
+                        <ComboBoxItem Content="Freitag"/>
+                        <ComboBoxItem Content="Samstag"/>
+                        <ComboBoxItem Content="Sonntag"/>
+                    </ComboBox>
+                    <TextBlock x:Name="SettingsMonthlyDayLabel" Text="Tag im Monat (1-31)" Margin="0,0,0,4"/>
+                    <TextBox x:Name="SettingsMonthlyDayBox" Margin="0,0,0,14"/>
                     <TextBlock x:Name="SettingsDailyAtLabel" Text="Uhrzeit (HH:mm)" Margin="0,0,0,4"/>
                     <TextBox x:Name="SettingsDailyAtTimeBox" Margin="0,0,0,14"/>
 

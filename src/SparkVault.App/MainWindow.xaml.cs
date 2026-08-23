@@ -105,13 +105,50 @@ public partial class MainWindow : Window
                 return lastRunStartedAt.Value.ToLocalTime().AddHours(hours).ToString("g");
 
             case ScheduleType.DailyAt when job.DailyAtTime is { } time:
+            {
                 var todayTarget = DateTime.Today + time.ToTimeSpan();
                 var next = DateTime.Now < todayTarget ? todayTarget : todayTarget.AddDays(1);
                 return next.ToString("g");
+            }
+
+            case ScheduleType.Weekdays when job.DailyAtTime is { } time:
+            {
+                var candidate = DateTime.Today + time.ToTimeSpan();
+                if (DateTime.Now >= candidate) candidate = candidate.AddDays(1);
+                while (candidate.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+                    candidate = candidate.AddDays(1);
+                return candidate.ToString("g");
+            }
+
+            case ScheduleType.Weekly when job.DailyAtTime is { } time && job.WeeklyDay is { } weeklyDay:
+            {
+                var candidate = DateTime.Today + time.ToTimeSpan();
+                while (candidate.DayOfWeek != weeklyDay || DateTime.Now >= candidate)
+                    candidate = candidate.AddDays(1);
+                return candidate.ToString("g");
+            }
+
+            case ScheduleType.Monthly when job.DailyAtTime is { } time && job.MonthlyDay is { } monthlyDay:
+                return NextMonthlyOccurrence(DateTime.Now, time, monthlyDay).ToString("g");
 
             default:
                 return "-";
         }
+    }
+
+    private static DateTime NextMonthlyOccurrence(DateTime now, TimeOnly time, int monthlyDay)
+    {
+        var year = now.Year;
+        var month = now.Month;
+        for (var i = 0; i < 13; i++)
+        {
+            var day = Math.Min(monthlyDay, DateTime.DaysInMonth(year, month));
+            var candidate = new DateTime(year, month, day) + time.ToTimeSpan();
+            if (candidate > now) return candidate;
+            month++;
+            if (month > 12) { month = 1; year++; }
+        }
+        return now; // unreachable in practice — 13 months always finds a match
     }
 
     private BackupJob? CurrentJob => _jobId is { } id ? App.JobRepository.GetById(id) : null;
@@ -520,10 +557,15 @@ public partial class MainWindow : Window
             {
                 ScheduleType.Interval => 1,
                 ScheduleType.DailyAt => 2,
+                ScheduleType.Weekdays => 3,
+                ScheduleType.Weekly => 4,
+                ScheduleType.Monthly => 5,
                 _ => 0,
             };
             SettingsIntervalHoursBox.Text = job.IntervalHours?.ToString() ?? "";
             SettingsDailyAtTimeBox.Text = job.DailyAtTime?.ToString("HH:mm") ?? "";
+            SettingsWeeklyDayCombo.SelectedIndex = job.WeeklyDay is { } weeklyDay ? DayOfWeekToComboIndex(weeklyDay) : -1;
+            SettingsMonthlyDayBox.Text = job.MonthlyDay?.ToString() ?? "";
         }
         else
         {
@@ -535,8 +577,14 @@ public partial class MainWindow : Window
             SettingsScheduleTypeCombo.SelectedIndex = 0;
             SettingsIntervalHoursBox.Text = "";
             SettingsDailyAtTimeBox.Text = "";
+            SettingsWeeklyDayCombo.SelectedIndex = -1;
+            SettingsMonthlyDayBox.Text = "";
         }
     }
+
+    // SettingsWeeklyDayCombo lists Montag..Sonntag (index 0-6); DayOfWeek numbers Sunday=0..Saturday=6.
+    private static int DayOfWeekToComboIndex(DayOfWeek day) => ((int)day + 6) % 7;
+    private static DayOfWeek ComboIndexToDayOfWeek(int index) => (DayOfWeek)((index + 1) % 7);
 
     private void SettingsBrowseSource_Click(object sender, RoutedEventArgs e)
     {
@@ -573,11 +621,19 @@ public partial class MainWindow : Window
     private void SettingsScheduleTypeCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
         var isInterval = SettingsScheduleTypeCombo.SelectedIndex == 1;
-        var isDailyAt = SettingsScheduleTypeCombo.SelectedIndex == 2;
+        // DailyAt, Weekdays, Weekly, and Monthly all share the same "time of day" field.
+        var hasTimeOfDay = SettingsScheduleTypeCombo.SelectedIndex is 2 or 3 or 4 or 5;
+        var isWeekly = SettingsScheduleTypeCombo.SelectedIndex == 4;
+        var isMonthly = SettingsScheduleTypeCombo.SelectedIndex == 5;
+
         SettingsIntervalLabel.Visibility = isInterval ? Visibility.Visible : Visibility.Collapsed;
         SettingsIntervalHoursBox.Visibility = isInterval ? Visibility.Visible : Visibility.Collapsed;
-        SettingsDailyAtLabel.Visibility = isDailyAt ? Visibility.Visible : Visibility.Collapsed;
-        SettingsDailyAtTimeBox.Visibility = isDailyAt ? Visibility.Visible : Visibility.Collapsed;
+        SettingsWeeklyDayLabel.Visibility = isWeekly ? Visibility.Visible : Visibility.Collapsed;
+        SettingsWeeklyDayCombo.Visibility = isWeekly ? Visibility.Visible : Visibility.Collapsed;
+        SettingsMonthlyDayLabel.Visibility = isMonthly ? Visibility.Visible : Visibility.Collapsed;
+        SettingsMonthlyDayBox.Visibility = isMonthly ? Visibility.Visible : Visibility.Collapsed;
+        SettingsDailyAtLabel.Visibility = hasTimeOfDay ? Visibility.Visible : Visibility.Collapsed;
+        SettingsDailyAtTimeBox.Visibility = hasTimeOfDay ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void SettingsSave_Click(object sender, RoutedEventArgs e)
@@ -618,6 +674,9 @@ public partial class MainWindow : Window
         {
             1 => ScheduleType.Interval,
             2 => ScheduleType.DailyAt,
+            3 => ScheduleType.Weekdays,
+            4 => ScheduleType.Weekly,
+            5 => ScheduleType.Monthly,
             _ => ScheduleType.None,
         };
 
@@ -633,8 +692,9 @@ public partial class MainWindow : Window
             intervalHours = hours;
         }
 
+        // DailyAt, Weekdays, Weekly, and Monthly all share the same "time of day" field.
         TimeOnly? dailyAtTime = null;
-        if (scheduleType == ScheduleType.DailyAt)
+        if (scheduleType is ScheduleType.DailyAt or ScheduleType.Weekdays or ScheduleType.Weekly or ScheduleType.Monthly)
         {
             if (!TimeOnly.TryParse(SettingsDailyAtTimeBox.Text, out var time))
             {
@@ -643,6 +703,30 @@ public partial class MainWindow : Window
                 return;
             }
             dailyAtTime = time;
+        }
+
+        DayOfWeek? weeklyDay = null;
+        if (scheduleType == ScheduleType.Weekly)
+        {
+            if (SettingsWeeklyDayCombo.SelectedIndex < 0)
+            {
+                System.Windows.MessageBox.Show(this, "Bitte einen Wochentag auswählen.", "SparkVault",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+            weeklyDay = ComboIndexToDayOfWeek(SettingsWeeklyDayCombo.SelectedIndex);
+        }
+
+        int? monthlyDay = null;
+        if (scheduleType == ScheduleType.Monthly)
+        {
+            if (!int.TryParse(SettingsMonthlyDayBox.Text, out var day) || day is < 1 or > 31)
+            {
+                System.Windows.MessageBox.Show(this, "Bitte einen Tag im Monat zwischen 1 und 31 angeben.", "SparkVault",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+            monthlyDay = day;
         }
 
         var job = new BackupJob
@@ -656,6 +740,8 @@ public partial class MainWindow : Window
             ScheduleType = scheduleType,
             IntervalHours = intervalHours,
             DailyAtTime = dailyAtTime,
+            WeeklyDay = weeklyDay,
+            MonthlyDay = monthlyDay,
             Targets = _settingsTargets.Select(t => t.Target).ToList(),
         };
 

@@ -21,7 +21,9 @@ public static class SparkVaultDatabase
                 ExcludePatterns TEXT NOT NULL,
                 ScheduleType TEXT NOT NULL,
                 IntervalHours INTEGER NULL,
-                DailyAtTime TEXT NULL
+                DailyAtTime TEXT NULL,
+                WeeklyDay TEXT NULL,
+                MonthlyDay INTEGER NULL
             );
 
             CREATE TABLE IF NOT EXISTS Targets (
@@ -67,6 +69,31 @@ public static class SparkVaultDatabase
             CREATE INDEX IF NOT EXISTS IX_RunFiles_RunId ON RunFiles(RunId);
             """;
         command.ExecuteNonQuery();
+
+        // CREATE TABLE IF NOT EXISTS only helps for brand-new tables — an existing Jobs table
+        // from before the Weekly/Monthly schedule types were added has neither column. No
+        // migration framework here (matches the rest of this pre-release app), so just add
+        // whatever's missing directly.
+        EnsureColumn(connection, "Jobs", "WeeklyDay", "TEXT NULL");
+        EnsureColumn(connection, "Jobs", "MonthlyDay", "INTEGER NULL");
+    }
+
+    private static void EnsureColumn(SqliteConnection connection, string table, string column, string definition)
+    {
+        var checkCommand = connection.CreateCommand();
+        checkCommand.CommandText = $"PRAGMA table_info({table});";
+        using (var reader = checkCommand.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                if (string.Equals(reader.GetString(reader.GetOrdinal("name")), column, StringComparison.OrdinalIgnoreCase))
+                    return;
+            }
+        }
+
+        var alterCommand = connection.CreateCommand();
+        alterCommand.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {definition};";
+        alterCommand.ExecuteNonQuery();
     }
 
     internal static string DisablePooling(string connectionString) =>

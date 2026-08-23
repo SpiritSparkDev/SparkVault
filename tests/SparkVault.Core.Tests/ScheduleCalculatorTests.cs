@@ -59,4 +59,80 @@ public class ScheduleCalculatorTests
         var lastRun = new DateTime(2026, 8, 19, 2, 30, 0);
         Assert.False(ScheduleCalculator.IsDue(job, lastRun, now));
     }
+
+    // 2026-08-19 is a Wednesday; 2026-08-22 is a Saturday.
+    [Fact]
+    public void Weekdays_NotDueOnWeekend()
+    {
+        var saturday = new DateTime(2026, 8, 22, 3, 0, 0);
+        var job = new BackupJob { ScheduleType = ScheduleType.Weekdays, DailyAtTime = new TimeOnly(2, 0) };
+        Assert.False(ScheduleCalculator.IsDue(job, null, saturday));
+    }
+
+    [Fact]
+    public void Weekdays_DueOnWeekdayAfterTargetTime()
+    {
+        var wednesday = new DateTime(2026, 8, 19, 3, 0, 0);
+        var job = new BackupJob { ScheduleType = ScheduleType.Weekdays, DailyAtTime = new TimeOnly(2, 0) };
+        Assert.True(ScheduleCalculator.IsDue(job, wednesday.AddDays(-1), wednesday));
+    }
+
+    [Fact]
+    public void Weekly_NotDueOnWrongDayOfWeek()
+    {
+        var wednesday = new DateTime(2026, 8, 19, 3, 0, 0);
+        var job = new BackupJob { ScheduleType = ScheduleType.Weekly, DailyAtTime = new TimeOnly(2, 0), WeeklyDay = DayOfWeek.Monday };
+        Assert.False(ScheduleCalculator.IsDue(job, null, wednesday));
+    }
+
+    [Fact]
+    public void Weekly_DueOnMatchingDayAfterTargetTimeIfNotRunThisWeek()
+    {
+        var monday = new DateTime(2026, 8, 24, 3, 0, 0);
+        var job = new BackupJob { ScheduleType = ScheduleType.Weekly, DailyAtTime = new TimeOnly(2, 0), WeeklyDay = DayOfWeek.Monday };
+        Assert.True(ScheduleCalculator.IsDue(job, monday.AddDays(-7), monday));
+    }
+
+    [Fact]
+    public void Weekly_NotDueIfAlreadyRunAfterTargetTimeToday()
+    {
+        var monday = new DateTime(2026, 8, 24, 3, 0, 0);
+        var job = new BackupJob { ScheduleType = ScheduleType.Weekly, DailyAtTime = new TimeOnly(2, 0), WeeklyDay = DayOfWeek.Monday };
+        var lastRun = new DateTime(2026, 8, 24, 2, 30, 0);
+        Assert.False(ScheduleCalculator.IsDue(job, lastRun, monday));
+    }
+
+    [Fact]
+    public void Monthly_NotDueOnWrongDayOfMonth()
+    {
+        var now = new DateTime(2026, 8, 19, 3, 0, 0);
+        var job = new BackupJob { ScheduleType = ScheduleType.Monthly, DailyAtTime = new TimeOnly(2, 0), MonthlyDay = 1 };
+        Assert.False(ScheduleCalculator.IsDue(job, null, now));
+    }
+
+    [Fact]
+    public void Monthly_DueOnMatchingDayAfterTargetTimeIfNotRunThisMonth()
+    {
+        var firstOfMonth = new DateTime(2026, 8, 1, 3, 0, 0);
+        var job = new BackupJob { ScheduleType = ScheduleType.Monthly, DailyAtTime = new TimeOnly(2, 0), MonthlyDay = 1 };
+        Assert.True(ScheduleCalculator.IsDue(job, firstOfMonth.AddMonths(-1), firstOfMonth));
+    }
+
+    [Fact]
+    public void Monthly_ClampsToLastDayInShorterMonths()
+    {
+        // February 2026 has 28 days; a job scheduled for the 31st should fire on the 28th instead.
+        var feb28 = new DateTime(2026, 2, 28, 3, 0, 0);
+        var job = new BackupJob { ScheduleType = ScheduleType.Monthly, DailyAtTime = new TimeOnly(2, 0), MonthlyDay = 31 };
+        Assert.True(ScheduleCalculator.IsDue(job, null, feb28));
+    }
+
+    [Fact]
+    public void Monthly_NotDueIfAlreadyRunAfterTargetTimeToday()
+    {
+        var firstOfMonth = new DateTime(2026, 8, 1, 3, 0, 0);
+        var job = new BackupJob { ScheduleType = ScheduleType.Monthly, DailyAtTime = new TimeOnly(2, 0), MonthlyDay = 1 };
+        var lastRun = new DateTime(2026, 8, 1, 2, 30, 0);
+        Assert.False(ScheduleCalculator.IsDue(job, lastRun, firstOfMonth));
+    }
 }

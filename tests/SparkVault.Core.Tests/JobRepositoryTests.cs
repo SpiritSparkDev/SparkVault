@@ -55,6 +55,52 @@ public class JobRepositoryTests
     }
 
     [Fact]
+    public void AddThenGetById_RoundTripsWeeklyAndMonthlySchedule()
+    {
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var repo = new JobRepository(connectionString);
+
+            var weeklyId = repo.Add(new BackupJob
+            {
+                Name = "Weekly",
+                SourcePath = "C:\\a",
+                ScheduleType = ScheduleType.Weekly,
+                DailyAtTime = new TimeOnly(20, 0),
+                WeeklyDay = DayOfWeek.Friday,
+                Targets = new List<BackupTarget> { new() { Type = TargetType.Local, DestinationPath = "C:\\a1" } },
+            });
+            var monthlyId = repo.Add(new BackupJob
+            {
+                Name = "Monthly",
+                SourcePath = "C:\\b",
+                ScheduleType = ScheduleType.Monthly,
+                DailyAtTime = new TimeOnly(3, 30),
+                MonthlyDay = 15,
+                Targets = new List<BackupTarget> { new() { Type = TargetType.Local, DestinationPath = "C:\\b1" } },
+            });
+
+            var weekly = repo.GetById(weeklyId)!;
+            Assert.Equal(ScheduleType.Weekly, weekly.ScheduleType);
+            Assert.Equal(new TimeOnly(20, 0), weekly.DailyAtTime);
+            Assert.Equal(DayOfWeek.Friday, weekly.WeeklyDay);
+            Assert.Null(weekly.MonthlyDay);
+
+            var monthly = repo.GetById(monthlyId)!;
+            Assert.Equal(ScheduleType.Monthly, monthly.ScheduleType);
+            Assert.Equal(new TimeOnly(3, 30), monthly.DailyAtTime);
+            Assert.Equal(15, monthly.MonthlyDay);
+            Assert.Null(monthly.WeeklyDay);
+        }
+        finally
+        {
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
+
+    [Fact]
     public void Update_PreservesTargetIdForUnchangedTarget()
     {
         var connectionString = NewTempDbConnectionString(out var dbPath);

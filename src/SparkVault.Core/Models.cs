@@ -1,6 +1,6 @@
 namespace SparkVault.Core;
 
-public enum ScheduleType { None, Interval, DailyAt }
+public enum ScheduleType { None, Interval, DailyAt, Weekdays, Weekly, Monthly }
 
 public enum TargetType { Local, Ftp, Sftp, S3 }
 
@@ -45,7 +45,9 @@ public sealed class BackupJob
     public List<string> ExcludePatterns { get; set; } = new();
     public ScheduleType ScheduleType { get; set; } = ScheduleType.None;
     public int? IntervalHours { get; set; }
-    public TimeOnly? DailyAtTime { get; set; }
+    public TimeOnly? DailyAtTime { get; set; } // also the time-of-day for Weekdays/Weekly/Monthly
+    public DayOfWeek? WeeklyDay { get; set; }
+    public int? MonthlyDay { get; set; } // 1-31; clamped to the last real day for shorter months
     public List<BackupTarget> Targets { get; set; } = new();
 }
 

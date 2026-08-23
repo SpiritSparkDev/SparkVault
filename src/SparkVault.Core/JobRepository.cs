@@ -20,8 +20,8 @@ public sealed class JobRepository
             connection.Open();
             var command = connection.CreateCommand();
             command.CommandText = """
-                INSERT INTO Jobs (Name, SourcePath, ExcludePatterns, ScheduleType, IntervalHours, DailyAtTime)
-                VALUES ($name, $source, $exclude, $scheduleType, $intervalHours, $dailyAtTime);
+                INSERT INTO Jobs (Name, SourcePath, ExcludePatterns, ScheduleType, IntervalHours, DailyAtTime, WeeklyDay, MonthlyDay)
+                VALUES ($name, $source, $exclude, $scheduleType, $intervalHours, $dailyAtTime, $weeklyDay, $monthlyDay);
                 SELECT last_insert_rowid();
                 """;
             BindJobParameters(command, job);
@@ -46,7 +46,8 @@ public sealed class JobRepository
             command.CommandText = """
                 UPDATE Jobs
                 SET Name = $name, SourcePath = $source, ExcludePatterns = $exclude,
-                    ScheduleType = $scheduleType, IntervalHours = $intervalHours, DailyAtTime = $dailyAtTime
+                    ScheduleType = $scheduleType, IntervalHours = $intervalHours, DailyAtTime = $dailyAtTime,
+                    WeeklyDay = $weeklyDay, MonthlyDay = $monthlyDay
                 WHERE Id = $id;
                 """;
             BindJobParameters(command, job);
@@ -130,6 +131,8 @@ public sealed class JobRepository
         command.Parameters.AddWithValue("$scheduleType", job.ScheduleType.ToString());
         command.Parameters.AddWithValue("$intervalHours", (object?)job.IntervalHours ?? DBNull.Value);
         command.Parameters.AddWithValue("$dailyAtTime", (object?)job.DailyAtTime?.ToString("HH:mm") ?? DBNull.Value);
+        command.Parameters.AddWithValue("$weeklyDay", (object?)job.WeeklyDay?.ToString() ?? DBNull.Value);
+        command.Parameters.AddWithValue("$monthlyDay", (object?)job.MonthlyDay ?? DBNull.Value);
     }
 
     private static BackupJob ReadJob(SqliteDataReader reader)
@@ -146,6 +149,8 @@ public sealed class JobRepository
             ScheduleType = Enum.Parse<ScheduleType>(reader.GetString(reader.GetOrdinal("ScheduleType"))),
             IntervalHours = reader.IsDBNull(reader.GetOrdinal("IntervalHours")) ? null : reader.GetInt32(reader.GetOrdinal("IntervalHours")),
             DailyAtTime = reader.IsDBNull(reader.GetOrdinal("DailyAtTime")) ? null : TimeOnly.Parse(reader.GetString(reader.GetOrdinal("DailyAtTime"))),
+            WeeklyDay = reader.IsDBNull(reader.GetOrdinal("WeeklyDay")) ? null : Enum.Parse<DayOfWeek>(reader.GetString(reader.GetOrdinal("WeeklyDay"))),
+            MonthlyDay = reader.IsDBNull(reader.GetOrdinal("MonthlyDay")) ? null : reader.GetInt32(reader.GetOrdinal("MonthlyDay")),
         };
     }
 }
