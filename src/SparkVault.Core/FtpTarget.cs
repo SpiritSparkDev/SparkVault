@@ -88,6 +88,20 @@ public sealed class FtpTarget : IBackupTarget
         }
     }
 
+    public async Task DownloadAsync(string remotePath, string localDestinationPath, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await EnsureConnectedAsync(ct);
+
+        var full = RemotePath(remotePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(localDestinationPath)!);
+
+        await using var dest = File.Create(localDestinationPath);
+        var ok = await _client.DownloadStream(dest, full, token: ct);
+        if (!ok)
+            throw new IOException($"FTP-Download fehlgeschlagen für {remotePath}.");
+    }
+
     public async Task<IEnumerable<RemoteFileInfo>> ListExistingAsync(CancellationToken ct)
     {
         await EnsureConnectedAsync(ct);

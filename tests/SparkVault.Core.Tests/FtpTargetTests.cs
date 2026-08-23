@@ -144,4 +144,34 @@ public class FtpTargetTests
 
         Assert.False(await target.TestConnectionAsync(CancellationToken.None));
     }
+
+    [Fact]
+    public async Task DownloadAsync_UploadedFile_WritesIdenticalContentToDestination()
+    {
+        if (!DockerTestHelper.IsReachable(Host, Port)) return;
+
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-ftp-src-");
+        var restoreDir = Directory.CreateTempSubdirectory("sparkvault-ftp-restore-");
+        try
+        {
+            var filePath = Path.Combine(srcDir.FullName, "a.txt");
+            await File.WriteAllTextAsync(filePath, "hello ftp download");
+            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length);
+
+            await using var target = new FtpTarget(NewTestConfig());
+            await target.UploadAsync(file, progress: null, CancellationToken.None);
+
+            var restoredPath = Path.Combine(restoreDir.FullName, "restored-a.txt");
+            await target.DownloadAsync("a.txt", restoredPath, CancellationToken.None);
+
+            Assert.Equal("hello ftp download", await File.ReadAllTextAsync(restoredPath));
+
+            await target.DeleteAsync("a.txt", CancellationToken.None);
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
+            restoreDir.Delete(recursive: true);
+        }
+    }
 }
