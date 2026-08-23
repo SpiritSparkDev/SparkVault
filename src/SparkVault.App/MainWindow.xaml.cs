@@ -202,7 +202,7 @@ public partial class MainWindow : Window
     {
         var job = CurrentJob;
         if (job is null) return;
-        var result = MessageBox.Show(this, $"Job \"{job.Name}\" wirklich löschen?", "Geistes Funke",
+        var result = MessageBox.Show(this, $"Job \"{job.Name}\" wirklich löschen?", "SparkVault",
             MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (result != MessageBoxResult.Yes) return;
 
@@ -452,7 +452,7 @@ public partial class MainWindow : Window
 
         var result = System.Windows.MessageBox.Show(this,
             $"Dateien vom Stand \"{row.Label}\" werden nach \"{job.SourcePath}\" zurückgespielt und überschreiben dortige Dateien. Fortfahren?",
-            "Geistes Funke", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+            "SparkVault", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
         if (result != System.Windows.MessageBoxResult.Yes) return;
 
         RestoreContent.Visibility = Visibility.Collapsed;
@@ -476,7 +476,7 @@ public partial class MainWindow : Window
         try
         {
             await restoreRunner.RestoreAsync(job, target, row.RunId, progress, _restoreCts.Token);
-            System.Windows.MessageBox.Show(this, "Wiederherstellung abgeschlossen.", "Geistes Funke",
+            System.Windows.MessageBox.Show(this, "Wiederherstellung abgeschlossen.", "SparkVault",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
         }
         catch (OperationCanceledException)
@@ -485,7 +485,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show(this, $"Wiederherstellung fehlgeschlagen: {ex.Message}", "Geistes Funke",
+            System.Windows.MessageBox.Show(this, $"Wiederherstellung fehlgeschlagen: {ex.Message}", "SparkVault",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
         }
         finally
@@ -584,14 +584,14 @@ public partial class MainWindow : Window
     {
         if (string.IsNullOrWhiteSpace(SettingsNameBox.Text) || string.IsNullOrWhiteSpace(SettingsSourcePathBox.Text))
         {
-            System.Windows.MessageBox.Show(this, "Name und Quellpfad sind Pflichtfelder.", "Geistes Funke",
+            System.Windows.MessageBox.Show(this, "Name und Quellpfad sind Pflichtfelder.", "SparkVault",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
             return;
         }
 
         if (_settingsTargets.Count == 0)
         {
-            System.Windows.MessageBox.Show(this, "Bitte mindestens ein Ziel hinzufügen.", "Geistes Funke",
+            System.Windows.MessageBox.Show(this, "Bitte mindestens ein Ziel hinzufügen.", "SparkVault",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
             return;
         }
@@ -608,7 +608,7 @@ public partial class MainWindow : Window
             if (fullDest.Equals(fullSource, StringComparison.OrdinalIgnoreCase) ||
                 fullDest.StartsWith(sourcePrefix, StringComparison.OrdinalIgnoreCase))
             {
-                System.Windows.MessageBox.Show(this, "Ein lokales Ziel darf nicht innerhalb des Quellpfads liegen.", "Geistes Funke",
+                System.Windows.MessageBox.Show(this, "Ein lokales Ziel darf nicht innerhalb des Quellpfads liegen.", "SparkVault",
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                 return;
             }
@@ -626,7 +626,7 @@ public partial class MainWindow : Window
         {
             if (!int.TryParse(SettingsIntervalHoursBox.Text, out var hours) || hours <= 0)
             {
-                System.Windows.MessageBox.Show(this, "Bitte eine gültige Stundenzahl angeben.", "Geistes Funke",
+                System.Windows.MessageBox.Show(this, "Bitte eine gültige Stundenzahl angeben.", "SparkVault",
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                 return;
             }
@@ -638,7 +638,7 @@ public partial class MainWindow : Window
         {
             if (!TimeOnly.TryParse(SettingsDailyAtTimeBox.Text, out var time))
             {
-                System.Windows.MessageBox.Show(this, "Bitte eine gültige Uhrzeit im Format HH:mm angeben.", "Geistes Funke",
+                System.Windows.MessageBox.Show(this, "Bitte eine gültige Uhrzeit im Format HH:mm angeben.", "SparkVault",
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                 return;
             }

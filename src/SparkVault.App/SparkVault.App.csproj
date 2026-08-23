@@ -7,10 +7,10 @@
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
-    <ApplicationTitle>Geistes Funke</ApplicationTitle>
-    <AssemblyName>GeistesFunke</AssemblyName>
-    <Product>Geistes Funke</Product>
-    <AssemblyTitle>Geistes Funke</AssemblyTitle>
+    <ApplicationTitle>SparkVault</ApplicationTitle>
+    <AssemblyName>SparkVault</AssemblyName>
+    <Product>SparkVault</Product>
+    <AssemblyTitle>SparkVault</AssemblyTitle>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
   </PropertyGroup>
 

@@ -29,7 +29,7 @@ public partial class App : Application
         {
             Log.Logger.Fatal(args.Exception, "Unhandled UI exception");
             System.Windows.MessageBox.Show($"Ein unerwarteter Fehler ist aufgetreten: {args.Exception.Message}",
-                "Geistes Funke", MessageBoxButton.OK, MessageBoxImage.Error);
+                "SparkVault", MessageBoxButton.OK, MessageBoxImage.Error);
             args.Handled = true;
         };
 
@@ -78,7 +78,7 @@ public partial class App : Application
         {
             Icon = System.Drawing.SystemIcons.Application,
             Visible = true,
-            Text = "Geistes Funke - bereit",
+            Text = "SparkVault - bereit",
         };
         _trayIcon.DoubleClick += (_, _) => ShowMainWindow();
 
@@ -145,18 +145,18 @@ public partial class App : Application
         if (running)
         {
             _trayIcon.Icon = System.Drawing.SystemIcons.Application;
-            _trayIcon.Text = Truncate($"Geistes Funke - sichert \"{jobName}\"...");
+            _trayIcon.Text = Truncate($"SparkVault - sichert \"{jobName}\"...");
         }
         else if (status == RunStatus.Failed)
         {
             _trayIcon.Icon = System.Drawing.SystemIcons.Warning;
-            _trayIcon.Text = Truncate($"Geistes Funke - Fehler bei \"{jobName}\"");
-            _trayIcon.ShowBalloonTip(5000, "Geistes Funke", $"Sicherung von \"{jobName}\" fehlgeschlagen.", ToolTipIcon.Warning);
+            _trayIcon.Text = Truncate($"SparkVault - Fehler bei \"{jobName}\"");
+            _trayIcon.ShowBalloonTip(5000, "SparkVault", $"Sicherung von \"{jobName}\" fehlgeschlagen.", ToolTipIcon.Warning);
         }
         else
         {
             _trayIcon.Icon = System.Drawing.SystemIcons.Application;
-            _trayIcon.Text = "Geistes Funke - bereit";
+            _trayIcon.Text = "SparkVault - bereit";
         }
     }
 
