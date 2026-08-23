@@ -125,6 +125,19 @@ public sealed class FtpTarget : IBackupTarget
             await _client.DeleteFile(full, ct);
     }
 
+    public async Task MoveAsync(string fromRelativePath, string toRelativePath, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await EnsureConnectedAsync(ct);
+        var fromPath = RemotePath(fromRelativePath);
+        var toPath = RemotePath(toRelativePath);
+        if (!await _client.FileExists(fromPath, ct)) return;
+        var remoteDir = toPath[..toPath.LastIndexOf('/')];
+        if (!await _client.DirectoryExists(remoteDir, ct))
+            await _client.CreateDirectory(remoteDir, ct);
+        await _client.Rename(fromPath, toPath, ct);
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_client.IsConnected)

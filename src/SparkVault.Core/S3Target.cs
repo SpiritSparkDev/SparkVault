@@ -153,6 +153,29 @@ public sealed class S3Target : IBackupTarget
         await _client.DeleteObjectAsync(new DeleteObjectRequest { BucketName = _bucket, Key = key }, ct);
     }
 
+    public async Task MoveAsync(string fromRelativePath, string toRelativePath, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await EnsureBucketAsync(ct);
+        var fromKey = RemoteKey(fromRelativePath);
+        var toKey = RemoteKey(toRelativePath);
+        try
+        {
+            await _client.CopyObjectAsync(new CopyObjectRequest
+            {
+                SourceBucket = _bucket,
+                SourceKey = fromKey,
+                DestinationBucket = _bucket,
+                DestinationKey = toKey,
+            }, ct);
+        }
+        catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return; // source no longer exists — nothing to move
+        }
+        await _client.DeleteObjectAsync(new DeleteObjectRequest { BucketName = _bucket, Key = fromKey }, ct);
+    }
+
     public ValueTask DisposeAsync()
     {
         _client.Dispose();

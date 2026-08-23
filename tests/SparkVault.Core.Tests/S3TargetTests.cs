@@ -223,4 +223,46 @@ public class S3TargetTests
             restoreDir.Delete(recursive: true);
         }
     }
+
+    [Fact]
+    public async Task MoveAsync_UploadedFile_MovesToNewKeyServerSide()
+    {
+        if (!DockerTestHelper.IsReachable("127.0.0.1", Port)) return;
+
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-s3-src-");
+        try
+        {
+            var filePath = Path.Combine(srcDir.FullName, "a.txt");
+            await File.WriteAllTextAsync(filePath, "move me s3");
+            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
+
+            var config = NewTestConfig();
+            await CreateBucketAsync(config.Bucket!);
+            await using var target = new S3Target(config);
+            await target.UploadAsync(file, progress: null, CancellationToken.None);
+
+            await target.MoveAsync("a.txt", "_deleted/20260824-100000/a.txt", CancellationToken.None);
+
+            var listed = (await target.ListExistingAsync(CancellationToken.None)).ToList();
+            Assert.DoesNotContain(listed, f => f.Path == "a.txt");
+            Assert.Contains(listed, f => f.Path == "_deleted/20260824-100000/a.txt" && f.Size == file.Size);
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task MoveAsync_SourceKeyDoesNotExist_DoesNotThrow()
+    {
+        if (!DockerTestHelper.IsReachable("127.0.0.1", Port)) return;
+
+        var config = NewTestConfig();
+        await CreateBucketAsync(config.Bucket!);
+        await using var target = new S3Target(config);
+
+        await target.MoveAsync("never-uploaded.txt", "_deleted/x/never-uploaded.txt", CancellationToken.None);
+        // No exception is the assertion — nothing to move is not an error condition.
+    }
 }

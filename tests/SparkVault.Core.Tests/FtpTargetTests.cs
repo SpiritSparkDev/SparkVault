@@ -174,4 +174,31 @@ public class FtpTargetTests
             restoreDir.Delete(recursive: true);
         }
     }
+
+    [Fact]
+    public async Task MoveAsync_UploadedFile_MovesToNewRelativePath()
+    {
+        if (!DockerTestHelper.IsReachable(Host, Port)) return;
+
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-ftp-src-");
+        try
+        {
+            var filePath = Path.Combine(srcDir.FullName, "a.txt");
+            await File.WriteAllTextAsync(filePath, "move me ftp");
+            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
+
+            await using var target = new FtpTarget(NewTestConfig());
+            await target.UploadAsync(file, progress: null, CancellationToken.None);
+
+            await target.MoveAsync("a.txt", "_deleted/20260824-100000/a.txt", CancellationToken.None);
+
+            var listed = (await target.ListExistingAsync(CancellationToken.None)).ToList();
+            Assert.DoesNotContain(listed, f => f.Path == "a.txt");
+            Assert.Contains(listed, f => f.Path == "_deleted/20260824-100000/a.txt");
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
+        }
+    }
 }

@@ -11,4 +11,5 @@ public interface IBackupTarget : IAsyncDisposable
     Task DownloadAsync(string remotePath, string localDestinationPath, CancellationToken ct);
     Task<IEnumerable<RemoteFileInfo>> ListExistingAsync(CancellationToken ct);
     Task DeleteAsync(string remotePath, CancellationToken ct);
+    Task MoveAsync(string fromRelativePath, string toRelativePath, CancellationToken ct);
 }

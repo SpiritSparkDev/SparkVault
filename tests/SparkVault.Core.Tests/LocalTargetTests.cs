@@ -154,4 +154,32 @@ public class LocalTargetTests
             restoreDir.Delete(recursive: true);
         }
     }
+
+    [Fact]
+    public async Task MoveAsync_UploadedFile_MovesToNewRelativePathWithinDestination()
+    {
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-local-src-");
+        var destDir = Directory.CreateTempSubdirectory("sparkvault-local-dest-");
+        try
+        {
+            var filePath = Path.Combine(srcDir.FullName, "a.txt");
+            await File.WriteAllTextAsync(filePath, "move me");
+            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
+
+            var target = new LocalTarget(destDir.FullName);
+            await target.UploadAsync(file, progress: null, CancellationToken.None);
+
+            await target.MoveAsync("a.txt", "_deleted\\20260824-100000\\a.txt", CancellationToken.None);
+
+            Assert.False(File.Exists(Path.Combine(destDir.FullName, "a.txt")));
+            var movedPath = Path.Combine(destDir.FullName, "_deleted", "20260824-100000", "a.txt");
+            Assert.True(File.Exists(movedPath));
+            Assert.Equal("move me", await File.ReadAllTextAsync(movedPath));
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
+            destDir.Delete(recursive: true);
+        }
+    }
 }
