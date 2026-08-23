@@ -66,3 +66,5 @@ public sealed class BackupRun
 }
 
 public sealed record BackupFile(string FullPath, string RelativePath, long Size);
+
+public sealed record RunFileRecord(string RelativePath, long Size);

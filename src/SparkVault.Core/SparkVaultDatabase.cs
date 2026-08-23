@@ -56,6 +56,15 @@ public static class SparkVaultDatabase
                 TotalBytes INTEGER NOT NULL,
                 ErrorMessage TEXT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS RunFiles (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                RunId INTEGER NOT NULL,
+                RelativePath TEXT NOT NULL,
+                Size INTEGER NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS IX_RunFiles_RunId ON RunFiles(RunId);
             """;
         command.ExecuteNonQuery();
     }
