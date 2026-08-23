@@ -13,6 +13,14 @@ public class ScheduleCalculatorTests
     }
 
     [Fact]
+    public void OnChange_NeverDueViaIsDue()
+    {
+        var job = new BackupJob { ScheduleType = ScheduleType.OnChange };
+        Assert.False(ScheduleCalculator.IsDue(job, null, DateTime.UtcNow));
+        Assert.False(ScheduleCalculator.IsDue(job, DateTime.UtcNow.AddYears(-1), DateTime.UtcNow));
+    }
+
+    [Fact]
     public void Interval_DueWhenNeverRun()
     {
         var job = new BackupJob { ScheduleType = ScheduleType.Interval, IntervalHours = 6 };

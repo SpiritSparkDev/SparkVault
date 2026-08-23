@@ -38,6 +38,9 @@ public static class ScheduleCalculator
                     return false;
                 return IsDueAtOrAfter(lastRunAt, now, now.Date + monthlyTime.ToTimeSpan());
 
+            case ScheduleType.OnChange:
+                return false;
+
             case ScheduleType.None:
             default:
                 return false;

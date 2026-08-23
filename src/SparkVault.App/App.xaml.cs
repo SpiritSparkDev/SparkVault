@@ -117,6 +117,9 @@ public partial class App : Application
         // starts silently in the tray, unchanged.
         if (!File.Exists(_welcomeMarkerPath) && JobRepository.GetAll().Count == 0)
             ShowMainWindow();
+
+        _ = Task.Run(() => OnChangeJobChecker.RunDueJobsAsync(
+            JobRepository, RunRepository, RunFileRepository, Runner, Log.Logger, CancellationToken.None));
     }
 
     private static void EnsureAutostartRegistered()

@@ -1,6 +1,6 @@
 namespace SparkVault.Core;
 
-public enum ScheduleType { None, Interval, DailyAt, Weekdays, Weekly, Monthly }
+public enum ScheduleType { None, Interval, DailyAt, Weekdays, Weekly, Monthly, OnChange }
 
 public enum TargetType { Local, Ftp, Sftp, S3 }
 
