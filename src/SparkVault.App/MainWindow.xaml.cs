@@ -131,6 +131,9 @@ public partial class MainWindow : Window
             case ScheduleType.Monthly when job.DailyAtTime is { } time && job.MonthlyDay is { } monthlyDay:
                 return NextMonthlyOccurrence(DateTime.Now, time, monthlyDay).ToString("g");
 
+            case ScheduleType.OnChange:
+                return "Beim nächsten Programmstart, falls Änderungen";
+
             default:
                 return "-";
         }
@@ -560,12 +563,14 @@ public partial class MainWindow : Window
                 ScheduleType.Weekdays => 3,
                 ScheduleType.Weekly => 4,
                 ScheduleType.Monthly => 5,
+                ScheduleType.OnChange => 6,
                 _ => 0,
             };
             SettingsIntervalHoursBox.Text = job.IntervalHours?.ToString() ?? "";
             SettingsDailyAtTimeBox.Text = job.DailyAtTime?.ToString("HH:mm") ?? "";
             SettingsWeeklyDayCombo.SelectedIndex = job.WeeklyDay is { } weeklyDay ? DayOfWeekToComboIndex(weeklyDay) : -1;
             SettingsMonthlyDayBox.Text = job.MonthlyDay?.ToString() ?? "";
+            SettingsVerifyTargetCheckBox.IsChecked = job.VerifyTargetBeforeRun;
         }
         else
         {
@@ -579,6 +584,7 @@ public partial class MainWindow : Window
             SettingsDailyAtTimeBox.Text = "";
             SettingsWeeklyDayCombo.SelectedIndex = -1;
             SettingsMonthlyDayBox.Text = "";
+            SettingsVerifyTargetCheckBox.IsChecked = false;
         }
     }
 
@@ -677,6 +683,7 @@ public partial class MainWindow : Window
             3 => ScheduleType.Weekdays,
             4 => ScheduleType.Weekly,
             5 => ScheduleType.Monthly,
+            6 => ScheduleType.OnChange,
             _ => ScheduleType.None,
         };
 
@@ -742,6 +749,7 @@ public partial class MainWindow : Window
             DailyAtTime = dailyAtTime,
             WeeklyDay = weeklyDay,
             MonthlyDay = monthlyDay,
+            VerifyTargetBeforeRun = SettingsVerifyTargetCheckBox.IsChecked == true,
             Targets = _settingsTargets.Select(t => t.Target).ToList(),
         };
 

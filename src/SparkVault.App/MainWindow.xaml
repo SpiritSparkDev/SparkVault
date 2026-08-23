@@ -314,7 +314,9 @@
                         <ComboBoxItem Content="Werktags (Mo-Fr)"/>
                         <ComboBoxItem Content="Wöchentlich"/>
                         <ComboBoxItem Content="Monatlich"/>
+                        <ComboBoxItem Content="Bei veränderten Daten"/>
                     </ComboBox>
+                    <CheckBox x:Name="SettingsVerifyTargetCheckBox" Content="Vor jedem Lauf Ziel-Inhalt prüfen" Margin="0,0,0,14"/>
                     <TextBlock x:Name="SettingsIntervalLabel" Text="Intervall in Stunden" Margin="0,0,0,4"/>
                     <TextBox x:Name="SettingsIntervalHoursBox" Margin="0,0,0,14"/>
                     <TextBlock x:Name="SettingsWeeklyDayLabel" Text="Wochentag" Margin="0,0,0,4"/>
