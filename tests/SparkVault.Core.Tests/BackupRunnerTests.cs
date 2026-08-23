@@ -34,7 +34,8 @@ public class BackupRunnerTests
             var job = jobRepo.GetById(jobId)!;
 
             var runRepo = new RunRepository(connectionString);
-            var runner = new BackupRunner(runRepo, Log.Logger);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
 
             var results = await runner.RunAsync(job, progress: null, CancellationToken.None);
 
@@ -79,7 +80,8 @@ public class BackupRunnerTests
             var job = jobRepo.GetById(jobId)!;
 
             var runRepo = new RunRepository(connectionString);
-            var runner = new BackupRunner(runRepo, Log.Logger);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
 
             var results = await runner.RunAsync(job, progress: null, CancellationToken.None);
 
@@ -127,7 +129,8 @@ public class BackupRunnerTests
             var job = jobRepo.GetById(jobId)!;
 
             var runRepo = new RunRepository(connectionString);
-            var runner = new BackupRunner(runRepo, Log.Logger);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
 
             var results = await runner.RunAsync(job, progress: null, CancellationToken.None);
 
@@ -162,7 +165,8 @@ public class BackupRunnerTests
             var job = jobRepo.GetById(jobId)!;
 
             var runRepo = new RunRepository(connectionString);
-            var runner = new BackupRunner(runRepo, Log.Logger);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
 
             var results = await runner.RunAsync(job, progress: null, CancellationToken.None);
 
@@ -203,7 +207,8 @@ public class BackupRunnerTests
             var job = jobRepo.GetById(jobId)!;
 
             var runRepo = new RunRepository(connectionString);
-            var runner = new BackupRunner(runRepo, Log.Logger);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
 
             var startedCount = 0;
             var completedStatuses = new List<RunStatus>();
@@ -264,7 +269,8 @@ public class BackupRunnerTests
             var job = jobRepo.GetById(jobId)!;
 
             var runRepo = new RunRepository(connectionString);
-            var runner = new BackupRunner(runRepo, Log.Logger);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
 
             using var cts = new CancellationTokenSource();
 
@@ -327,7 +333,8 @@ public class BackupRunnerTests
             var job = jobRepo.GetById(jobId)!;
 
             var runRepo = new RunRepository(connectionString);
-            var runner = new BackupRunner(runRepo, Log.Logger);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
 
             var results = await runner.RunAsync(job, progress: null, CancellationToken.None);
 
@@ -377,7 +384,8 @@ public class BackupRunnerTests
             var job = jobRepo.GetById(jobId)!;
 
             var runRepo = new RunRepository(connectionString);
-            var runner = new BackupRunner(runRepo, Log.Logger);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
 
             var results = await runner.RunAsync(job, progress: null, CancellationToken.None);
 
@@ -415,7 +423,8 @@ public class BackupRunnerTests
             var job = jobRepo.GetById(jobId)!;
 
             var runRepo = new RunRepository(connectionString);
-            var runner = new BackupRunner(runRepo, Log.Logger);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
 
             // Paused before the run starts (not from a Progress<T> callback — Progress.Report
             // marshals to the captured context asynchronously, so a Pause() called from inside
@@ -439,6 +448,83 @@ public class BackupRunnerTests
         {
             srcDir.Delete(recursive: true);
             destDir.Delete(recursive: true);
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_SuccessfulRun_WritesRunFilesManifest()
+    {
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-src-");
+        var destDir = Directory.CreateTempSubdirectory("sparkvault-dest-");
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            File.WriteAllText(Path.Combine(srcDir.FullName, "a.txt"), "hello");
+            File.WriteAllText(Path.Combine(srcDir.FullName, "b.txt"), "world!");
+
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var jobRepo = new JobRepository(connectionString);
+            var jobId = jobRepo.Add(new BackupJob
+            {
+                Name = "Test",
+                SourcePath = srcDir.FullName,
+                Targets = new List<BackupTarget> { new() { Type = TargetType.Local, DestinationPath = destDir.FullName } },
+            });
+            var job = jobRepo.GetById(jobId)!;
+
+            var runRepo = new RunRepository(connectionString);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
+
+            var results = await runner.RunAsync(job, progress: null, CancellationToken.None);
+
+            Assert.Equal(RunStatus.Success, results[0].Status);
+            var manifest = runFileRepo.GetByRunId(results[0].Id);
+            Assert.Equal(2, manifest.Count);
+            Assert.Contains(manifest, f => f.RelativePath == "Test\\a.txt" && f.Size == 5);
+            Assert.Contains(manifest, f => f.RelativePath == "Test\\b.txt" && f.Size == 6);
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
+            destDir.Delete(recursive: true);
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_FailedRun_WritesNoRunFilesManifest()
+    {
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-src-");
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            File.WriteAllText(Path.Combine(srcDir.FullName, "a.txt"), "hello");
+
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var jobRepo = new JobRepository(connectionString);
+            var jobId = jobRepo.Add(new BackupJob
+            {
+                Name = "Test",
+                SourcePath = srcDir.FullName,
+                // Unreachable FTP target -> TestConnectionAsync fails -> run is Failed, no files uploaded.
+                Targets = new List<BackupTarget> { new() { Type = TargetType.Ftp, Host = "127.0.0.1", Port = 1, Username = "x", RemotePath = "/x" } },
+            });
+            var job = jobRepo.GetById(jobId)!;
+
+            var runRepo = new RunRepository(connectionString);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
+
+            var results = await runner.RunAsync(job, progress: null, CancellationToken.None);
+
+            Assert.Equal(RunStatus.Failed, results[0].Status);
+            Assert.Empty(runFileRepo.GetByRunId(results[0].Id));
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
             if (File.Exists(dbPath)) File.Delete(dbPath);
         }
     }

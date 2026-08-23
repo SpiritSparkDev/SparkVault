@@ -11,6 +11,7 @@ public partial class App : Application
 {
     public static JobRepository JobRepository { get; private set; } = null!;
     public static RunRepository RunRepository { get; private set; } = null!;
+    public static RunFileRepository RunFileRepository { get; private set; } = null!;
     public static BackupRunner Runner { get; private set; } = null!;
 
     private BackgroundScheduler? _scheduler;
@@ -42,7 +43,8 @@ public partial class App : Application
 
         JobRepository = new JobRepository(connectionString);
         RunRepository = new RunRepository(connectionString);
-        Runner = new BackupRunner(RunRepository, Log.Logger);
+        RunFileRepository = new RunFileRepository(connectionString);
+        Runner = new BackupRunner(RunRepository, RunFileRepository, Log.Logger);
 
         _scheduler = new BackgroundScheduler(
             JobRepository,

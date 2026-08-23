@@ -34,7 +34,8 @@ public class BackgroundSchedulerTests
             });
 
             var runRepo = new RunRepository(connectionString);
-            var runner = new BackupRunner(runRepo, Log.Logger);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
 
             await using var scheduler = new BackgroundScheduler(
                 jobRepo, runRepo, runner,

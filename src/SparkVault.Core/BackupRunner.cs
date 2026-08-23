@@ -5,6 +5,7 @@ namespace SparkVault.Core;
 public sealed class BackupRunner
 {
     private readonly RunRepository _runRepository;
+    private readonly RunFileRepository _runFileRepository;
     private readonly ILogger _logger;
 
     // ponytail: single global lock serializes all jobs, not just the same job — fine for
@@ -15,9 +16,10 @@ public sealed class BackupRunner
     public event Action<BackupJob>? RunStarted;
     public event Action<BackupJob, RunStatus>? RunCompleted;
 
-    public BackupRunner(RunRepository runRepository, ILogger logger)
+    public BackupRunner(RunRepository runRepository, RunFileRepository runFileRepository, ILogger logger)
     {
         _runRepository = runRepository;
+        _runFileRepository = runFileRepository;
         _logger = logger;
     }
 
@@ -96,6 +98,7 @@ public sealed class BackupRunner
 
         int done = 0;
         long bytesDone = 0;
+        var uploaded = new List<RunFileRecord>();
 
         try
         {
@@ -116,6 +119,7 @@ public sealed class BackupRunner
                 await target.UploadAsync(file, progress, ct);
                 done++;
                 bytesDone += file.Size;
+                uploaded.Add(new RunFileRecord(file.RelativePath, file.Size));
                 progress?.Report(new TransferProgress(done, files.Count, bytesDone, totalBytes, file.RelativePath, targetConfig.Describe()));
             }
 
@@ -143,6 +147,9 @@ public sealed class BackupRunner
                 _runRepository.Update(run);
         }
 
+        if (run.Status == RunStatus.Success && run.Id != 0)
+            _runFileRepository.AddRange(run.Id, uploaded);
+
         return run;
     }
 
@@ -150,7 +157,7 @@ public sealed class BackupRunner
     // sharing the same physical destination (same FTP account, same S3 bucket, etc.) never
     // collide. Path.GetInvalidFileNameChars() also covers '/' and '\', so a job name can't
     // sneak in extra path segments.
-    private static string SanitizeForPath(string name)
+    internal static string SanitizeForPath(string name)
     {
         var invalid = Path.GetInvalidFileNameChars();
         return new string(name.Select(c => invalid.Contains(c) ? '_' : c).ToArray()).Trim();
