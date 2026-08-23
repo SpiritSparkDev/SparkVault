@@ -20,18 +20,19 @@ public class RunFileRepositoryTests
             SparkVaultDatabase.EnsureCreated(connectionString);
             var repo = new RunFileRepository(connectionString);
 
+            var modifiedA = new DateTime(2026, 8, 20, 10, 0, 0, DateTimeKind.Utc);
             var files = new List<RunFileRecord>
             {
-                new("Test\\a.txt", 100),
-                new("Test\\sub\\b.txt", 250),
+                new("Test\\a.txt", 100, modifiedA),
+                new("Test\\sub\\b.txt", 250, null),
             };
             repo.AddRange(runId: 42, files);
 
             var loaded = repo.GetByRunId(42);
 
             Assert.Equal(2, loaded.Count);
-            Assert.Contains(loaded, f => f.RelativePath == "Test\\a.txt" && f.Size == 100);
-            Assert.Contains(loaded, f => f.RelativePath == "Test\\sub\\b.txt" && f.Size == 250);
+            Assert.Contains(loaded, f => f.RelativePath == "Test\\a.txt" && f.Size == 100 && f.SourceModifiedUtc == modifiedA);
+            Assert.Contains(loaded, f => f.RelativePath == "Test\\sub\\b.txt" && f.Size == 250 && f.SourceModifiedUtc == null);
         }
         finally
         {

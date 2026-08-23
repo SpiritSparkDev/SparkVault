@@ -63,7 +63,8 @@ public static class SparkVaultDatabase
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 RunId INTEGER NOT NULL,
                 RelativePath TEXT NOT NULL,
-                Size INTEGER NOT NULL
+                Size INTEGER NOT NULL,
+                SourceModifiedUtc TEXT NULL
             );
 
             CREATE INDEX IF NOT EXISTS IX_RunFiles_RunId ON RunFiles(RunId);
@@ -76,6 +77,7 @@ public static class SparkVaultDatabase
         // whatever's missing directly.
         EnsureColumn(connection, "Jobs", "WeeklyDay", "TEXT NULL");
         EnsureColumn(connection, "Jobs", "MonthlyDay", "INTEGER NULL");
+        EnsureColumn(connection, "RunFiles", "SourceModifiedUtc", "TEXT NULL");
     }
 
     private static void EnsureColumn(SqliteConnection connection, string table, string column, string definition)

@@ -121,7 +121,7 @@ public sealed class BackupRunner
                 await target.UploadAsync(file, progress, ct);
                 done++;
                 bytesDone += file.Size;
-                uploaded.Add(new RunFileRecord(file.RelativePath, file.Size));
+                uploaded.Add(new RunFileRecord(file.RelativePath, file.Size, file.LastWriteTimeUtc));
                 progress?.Report(new TransferProgress(done, files.Count, bytesDone, totalBytes, file.RelativePath, targetConfig.Describe()));
             }
 

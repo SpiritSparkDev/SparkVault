@@ -69,4 +69,9 @@ public sealed class BackupRun
 
 public sealed record BackupFile(string FullPath, string RelativePath, long Size, DateTime LastWriteTimeUtc);
 
-public sealed record RunFileRecord(string RelativePath, long Size);
+public sealed record RunFileRecord(string RelativePath, long Size, DateTime? SourceModifiedUtc);
+
+// Shape of one entry in "the last known catalog for a target" — identical fields to
+// RunFileRecord, kept as its own type so IncrementalPlanner (Task 3) has no dependency on the
+// DB-record type and stays a pure, DB-free function.
+public sealed record ManifestEntry(string RelativePath, long Size, DateTime? SourceModifiedUtc);
