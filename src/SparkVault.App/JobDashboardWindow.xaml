@@ -24,47 +24,86 @@
             <StackPanel x:Name="OverviewPanel">
                 <TextBlock Text="Übersicht" Style="{StaticResource HeadingTextStyle}" FontSize="22" Margin="0,0,0,16"/>
 
-                <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
-                    <DockPanel>
-                        <Ellipse x:Name="StatusDot" Width="12" Height="12" Fill="{StaticResource AccentBrush}"
-                                 DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,14,0"/>
-                        <Button x:Name="RunNowButton" Content="Jetzt sichern" Style="{StaticResource PrimaryButtonStyle}"
-                                DockPanel.Dock="Right" Click="RunNowButton_Click"/>
-                        <Button x:Name="CancelButton" Content="Abbrechen" Style="{StaticResource GhostButtonStyle}"
-                                DockPanel.Dock="Right" Margin="0,0,8,0" Click="CancelButton_Click" IsEnabled="False"/>
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock x:Name="StatusTitleText" Text="Noch kein Backup" Style="{StaticResource HeadingTextStyle}" FontSize="16"/>
-                            <TextBlock x:Name="StatusMetaText" Text="" Style="{StaticResource MutedTextStyle}"/>
-                        </StackPanel>
-                    </DockPanel>
-                </Border>
+                <!-- Idle: last-run status + at-a-glance tiles -->
+                <StackPanel x:Name="IdleView">
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                        <DockPanel>
+                            <Ellipse x:Name="StatusDot" Width="12" Height="12" Fill="{StaticResource AccentBrush}"
+                                     DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                            <Button x:Name="RunNowButton" Content="Jetzt sichern" Style="{StaticResource PrimaryButtonStyle}"
+                                    DockPanel.Dock="Right" Click="RunNowButton_Click"/>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock x:Name="StatusTitleText" Text="Noch kein Backup" Style="{StaticResource HeadingTextStyle}" FontSize="16"/>
+                                <TextBlock x:Name="StatusMetaText" Text="" Style="{StaticResource MutedTextStyle}"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
 
-                <StackPanel x:Name="ProgressPanel" Visibility="Collapsed" Margin="0,0,0,16">
-                    <ProgressBar x:Name="RunProgressBar" Height="6" Minimum="0" Maximum="100"/>
-                    <TextBlock x:Name="CurrentFileText" Style="{StaticResource MutedTextStyle}" Margin="0,6,0,0"
-                               FontFamily="Consolas" TextTrimming="CharacterEllipsis"/>
+                    <UniformGrid Columns="3" Rows="1">
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,7,0">
+                            <StackPanel>
+                                <TextBlock Text="NÄCHSTES BACKUP" Style="{StaticResource MutedTextStyle}"/>
+                                <TextBlock x:Name="NextRunText" Style="{StaticResource HeadingTextStyle}" FontSize="16" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardStyle}" Margin="7,0,7,0">
+                            <StackPanel>
+                                <TextBlock Text="ZIELE" Style="{StaticResource MutedTextStyle}"/>
+                                <TextBlock x:Name="TargetsText" Style="{StaticResource HeadingTextStyle}" FontSize="16" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardStyle}" Margin="7,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="LETZTE GRÖSSE" Style="{StaticResource MutedTextStyle}"/>
+                                <TextBlock x:Name="LastSizeText" Style="{StaticResource HeadingTextStyle}" FontSize="16" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
                 </StackPanel>
 
-                <UniformGrid Columns="3" Rows="1">
-                    <Border Style="{StaticResource CardStyle}" Margin="0,0,7,0">
+                <!-- Running: live progress -->
+                <StackPanel x:Name="RunningView" Visibility="Collapsed">
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
                         <StackPanel>
-                            <TextBlock Text="NÄCHSTES BACKUP" Style="{StaticResource MutedTextStyle}"/>
-                            <TextBlock x:Name="NextRunText" Style="{StaticResource HeadingTextStyle}" FontSize="16" Margin="0,4,0,0"/>
+                            <DockPanel Margin="0,0,0,14">
+                                <Button x:Name="PauseButton" Content="Pausieren" Style="{StaticResource SecondaryButtonStyle}"
+                                        DockPanel.Dock="Right" Click="PauseButton_Click"/>
+                                <Button x:Name="RunCancelButton" Content="Abbrechen" Style="{StaticResource GhostButtonStyle}"
+                                        DockPanel.Dock="Right" Margin="0,0,8,0" Click="CancelButton_Click"/>
+                                <TextBlock x:Name="SpeedEtaText" Style="{StaticResource MutedTextStyle}"
+                                           DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,4"/>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                                    <TextBlock x:Name="PercentText" Text="0" Style="{StaticResource HeadingTextStyle}" FontSize="38" Foreground="{StaticResource Accent700Brush}"/>
+                                    <TextBlock Text="%" Style="{StaticResource HeadingTextStyle}" FontSize="22" Foreground="{StaticResource Accent700Brush}" Margin="0,0,0,3" VerticalAlignment="Bottom"/>
+                                </StackPanel>
+                            </DockPanel>
+                            <ProgressBar x:Name="RunProgressBar" Height="6" Minimum="0" Maximum="100" Margin="0,0,0,10"/>
+                            <TextBlock x:Name="CurrentFileText" Style="{StaticResource MutedTextStyle}"
+                                       FontFamily="Consolas" TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource CardStyle}" Margin="7,0,7,0">
-                        <StackPanel>
-                            <TextBlock Text="ZIELE" Style="{StaticResource MutedTextStyle}"/>
-                            <TextBlock x:Name="TargetsText" Style="{StaticResource HeadingTextStyle}" FontSize="16" Margin="0,4,0,0" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource CardStyle}" Margin="7,0,0,0">
-                        <StackPanel>
-                            <TextBlock Text="LETZTE GRÖSSE" Style="{StaticResource MutedTextStyle}"/>
-                            <TextBlock x:Name="LastSizeText" Style="{StaticResource HeadingTextStyle}" FontSize="16" Margin="0,4,0,0"/>
-                        </StackPanel>
-                    </Border>
-                </UniformGrid>
+
+                    <UniformGrid Columns="3" Rows="1">
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,7,0">
+                            <StackPanel>
+                                <TextBlock Text="DATEIEN" Style="{StaticResource MutedTextStyle}"/>
+                                <TextBlock x:Name="RunFilesText" Style="{StaticResource HeadingTextStyle}" FontSize="16" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardStyle}" Margin="7,0,7,0">
+                            <StackPanel>
+                                <TextBlock Text="ÜBERTRAGEN" Style="{StaticResource MutedTextStyle}"/>
+                                <TextBlock x:Name="RunBytesText" Style="{StaticResource HeadingTextStyle}" FontSize="16" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardStyle}" Margin="7,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="ZIEL" Style="{StaticResource MutedTextStyle}"/>
+                                <TextBlock x:Name="RunTargetText" Style="{StaticResource HeadingTextStyle}" FontSize="16" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+                </StackPanel>
             </StackPanel>
 
             <!-- Verlauf -->

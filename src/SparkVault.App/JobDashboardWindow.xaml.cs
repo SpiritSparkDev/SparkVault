@@ -9,6 +9,9 @@ public partial class JobDashboardWindow : Window
 
     private readonly int _jobId;
     private CancellationTokenSource? _runCts;
+    private PauseToken? _pauseToken;
+    private DateTime _speedSampleAt;
+    private long _speedSampleBytes;
 
     public JobDashboardWindow(int jobId)
     {
@@ -123,35 +126,86 @@ public partial class JobDashboardWindow : Window
         var job = CurrentJob;
         if (job is null) return;
 
-        RunNowButton.IsEnabled = false;
-        CancelButton.IsEnabled = true;
-        ProgressPanel.Visibility = Visibility.Visible;
+        IdleView.Visibility = Visibility.Collapsed;
+        RunningView.Visibility = Visibility.Visible;
         RunProgressBar.Value = 0;
+        PercentText.Text = "0";
         CurrentFileText.Text = "";
+        SpeedEtaText.Text = "";
+        RunFilesText.Text = "0 / 0";
+        RunBytesText.Text = "0 Bytes";
+        RunTargetText.Text = "";
+        PauseButton.Content = "Pausieren";
+
         _runCts = new CancellationTokenSource();
+        _pauseToken = new PauseToken();
+        _speedSampleAt = DateTime.UtcNow;
+        _speedSampleBytes = 0;
+
         var progress = new Progress<TransferProgress>(p =>
         {
-            RunProgressBar.Value = p.FilesTotal == 0 ? 0 : (double)p.FilesDone / p.FilesTotal * 100;
+            RunProgressBar.Value = p.BytesTotal == 0 ? 0 : (double)p.BytesDone / p.BytesTotal * 100;
+            PercentText.Text = ((int)RunProgressBar.Value).ToString();
             CurrentFileText.Text = p.CurrentFile;
+            RunFilesText.Text = $"{p.FilesDone} / {p.FilesTotal}";
+            RunBytesText.Text = FormatBytes(p.BytesDone);
+            RunTargetText.Text = p.CurrentTarget;
+            SpeedEtaText.Text = ComputeSpeedEta(p.BytesDone, p.BytesTotal);
         });
 
         try
         {
-            await App.Runner.RunAsync(job, progress, _runCts.Token);
+            await App.Runner.RunAsync(job, progress, _runCts.Token, _pauseToken);
         }
         finally
         {
-            RunNowButton.IsEnabled = true;
-            CancelButton.IsEnabled = false;
-            ProgressPanel.Visibility = Visibility.Collapsed;
+            IdleView.Visibility = Visibility.Visible;
+            RunningView.Visibility = Visibility.Collapsed;
             _runCts.Dispose();
             _runCts = null;
+            _pauseToken = null;
             LoadOverview();
+        }
+    }
+
+    private string ComputeSpeedEta(long bytesDone, long bytesTotal)
+    {
+        var now = DateTime.UtcNow;
+        var elapsed = (now - _speedSampleAt).TotalSeconds;
+        if (elapsed < 0.5) return SpeedEtaText.Text; // too soon for a stable sample, keep the last value
+
+        var bytesPerSecond = (bytesDone - _speedSampleBytes) / elapsed;
+        _speedSampleAt = now;
+        _speedSampleBytes = bytesDone;
+
+        if (bytesPerSecond <= 0) return "";
+
+        var remaining = bytesTotal - bytesDone;
+        var etaSeconds = remaining / bytesPerSecond;
+        var eta = etaSeconds < 60 ? "< 1 Min." : $"noch ca. {(int)Math.Ceiling(etaSeconds / 60)} Min.";
+        return $"{eta} · {FormatBytes((long)bytesPerSecond)}/s";
+    }
+
+    private void PauseButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_pauseToken is null) return;
+
+        if (_pauseToken.IsPaused)
+        {
+            _pauseToken.Resume();
+            PauseButton.Content = "Pausieren";
+        }
+        else
+        {
+            _pauseToken.Pause();
+            PauseButton.Content = "Fortsetzen";
         }
     }
 
     private void CancelButton_Click(object sender, RoutedEventArgs e)
     {
+        // PauseToken.WaitIfPausedAsync uses Task.WaitAsync(ct), so cancelling here unblocks a
+        // paused run too — no need to separately resume it first.
         _runCts?.Cancel();
     }
 }

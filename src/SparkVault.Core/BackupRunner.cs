@@ -112,11 +112,11 @@ public sealed class BackupRunner
             {
                 ct.ThrowIfCancellationRequested();
                 if (pauseToken is not null) await pauseToken.WaitIfPausedAsync(ct);
-                progress?.Report(new TransferProgress(done, files.Count, bytesDone, totalBytes, file.RelativePath));
+                progress?.Report(new TransferProgress(done, files.Count, bytesDone, totalBytes, file.RelativePath, targetConfig.Describe()));
                 await target.UploadAsync(file, progress, ct);
                 done++;
                 bytesDone += file.Size;
-                progress?.Report(new TransferProgress(done, files.Count, bytesDone, totalBytes, file.RelativePath));
+                progress?.Report(new TransferProgress(done, files.Count, bytesDone, totalBytes, file.RelativePath, targetConfig.Describe()));
             }
 
             run.Status = RunStatus.Success;

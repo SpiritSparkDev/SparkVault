@@ -1,6 +1,6 @@
 namespace SparkVault.Core;
 
-public sealed record TransferProgress(int FilesDone, int FilesTotal, long BytesDone, long BytesTotal, string CurrentFile);
+public sealed record TransferProgress(int FilesDone, int FilesTotal, long BytesDone, long BytesTotal, string CurrentFile, string CurrentTarget);
 
 public sealed record RemoteFileInfo(string Path, long Size);
 
