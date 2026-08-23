@@ -13,6 +13,8 @@ public sealed class BackupRunner
     // running multiple jobs truly concurrently ever becomes a real requirement.
     private readonly SemaphoreSlim _runLock = new(1, 1);
 
+    public SemaphoreSlim RunLock => _runLock;
+
     public event Action<BackupJob>? RunStarted;
     public event Action<BackupJob, RunStatus>? RunCompleted;
 
@@ -123,6 +125,7 @@ public sealed class BackupRunner
                 progress?.Report(new TransferProgress(done, files.Count, bytesDone, totalBytes, file.RelativePath, targetConfig.Describe()));
             }
 
+            _runFileRepository.AddRange(run.Id, uploaded);
             run.Status = RunStatus.Success;
             _logger.Information("Job {JobName} -> {Target} completed: {FileCount} files, {TotalBytes} bytes",
                 job.Name, targetConfig.Describe(), done, bytesDone);
@@ -147,9 +150,6 @@ public sealed class BackupRunner
                 _runRepository.Update(run);
         }
 
-        if (run.Status == RunStatus.Success && run.Id != 0)
-            _runFileRepository.AddRange(run.Id, uploaded);
-
         return run;
     }
 
@@ -157,7 +157,7 @@ public sealed class BackupRunner
     // sharing the same physical destination (same FTP account, same S3 bucket, etc.) never
     // collide. Path.GetInvalidFileNameChars() also covers '/' and '\', so a job name can't
     // sneak in extra path segments.
-    internal static string SanitizeForPath(string name)
+    private static string SanitizeForPath(string name)
     {
         var invalid = Path.GetInvalidFileNameChars();
         return new string(name.Select(c => invalid.Contains(c) ? '_' : c).ToArray()).Trim();

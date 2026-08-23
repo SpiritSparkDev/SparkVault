@@ -299,8 +299,7 @@ public partial class JobDashboardWindow : Window
             RestoreCurrentFileText.Text = p.CurrentFile;
         });
 
-        var runFileRepo = new RunFileRepository(App.ConnectionString);
-        var restoreRunner = new RestoreRunner(runFileRepo, Serilog.Log.Logger);
+        var restoreRunner = new RestoreRunner(App.RunFileRepository, App.Runner.RunLock, Serilog.Log.Logger);
 
         try
         {
