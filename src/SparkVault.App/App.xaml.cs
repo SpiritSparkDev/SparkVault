@@ -19,6 +19,7 @@ public partial class App : Application
     private NotifyIcon? _trayIcon;
     private bool _welcomeChecked;
     private string _welcomeMarkerPath = null!;
+    private MainWindow? _mainWindowInstance;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -28,7 +29,7 @@ public partial class App : Application
         {
             Log.Logger.Fatal(args.Exception, "Unhandled UI exception");
             System.Windows.MessageBox.Show($"Ein unerwarteter Fehler ist aufgetreten: {args.Exception.Message}",
-                "SparkVault", MessageBoxButton.OK, MessageBoxImage.Error);
+                "Geistes Funke", MessageBoxButton.OK, MessageBoxImage.Error);
             args.Handled = true;
         };
 
@@ -62,7 +63,7 @@ public partial class App : Application
         {
             Icon = System.Drawing.SystemIcons.Application,
             Visible = true,
-            Text = "SparkVault - bereit",
+            Text = "Geistes Funke - bereit",
         };
         _trayIcon.DoubleClick += (_, _) => ShowMainWindow();
 
@@ -129,18 +130,18 @@ public partial class App : Application
         if (running)
         {
             _trayIcon.Icon = System.Drawing.SystemIcons.Application;
-            _trayIcon.Text = Truncate($"SparkVault - sichert \"{jobName}\"...");
+            _trayIcon.Text = Truncate($"Geistes Funke - sichert \"{jobName}\"...");
         }
         else if (status == RunStatus.Failed)
         {
             _trayIcon.Icon = System.Drawing.SystemIcons.Warning;
-            _trayIcon.Text = Truncate($"SparkVault - Fehler bei \"{jobName}\"");
-            _trayIcon.ShowBalloonTip(5000, "SparkVault", $"Sicherung von \"{jobName}\" fehlgeschlagen.", ToolTipIcon.Warning);
+            _trayIcon.Text = Truncate($"Geistes Funke - Fehler bei \"{jobName}\"");
+            _trayIcon.ShowBalloonTip(5000, "Geistes Funke", $"Sicherung von \"{jobName}\" fehlgeschlagen.", ToolTipIcon.Warning);
         }
         else
         {
             _trayIcon.Icon = System.Drawing.SystemIcons.Application;
-            _trayIcon.Text = "SparkVault - bereit";
+            _trayIcon.Text = "Geistes Funke - bereit";
         }
     }
 
@@ -162,12 +163,16 @@ public partial class App : Application
             }
         }
 
-        if (MainWindow is null)
+        // WPF auto-assigns Application.MainWindow to the first Window ever shown — since
+        // WelcomeWindow can be shown before this ever runs, checking "MainWindow is null" here
+        // would silently skip constructing the real MainWindow. Track it ourselves instead.
+        if (_mainWindowInstance is null)
         {
-            MainWindow = new MainWindow();
+            _mainWindowInstance = new MainWindow();
+            MainWindow = _mainWindowInstance;
         }
-        MainWindow.Show();
-        MainWindow.Activate();
+        _mainWindowInstance.Show();
+        _mainWindowInstance.Activate();
     }
 
     protected override void OnExit(ExitEventArgs e)

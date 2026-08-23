@@ -11,9 +11,9 @@ public partial class WelcomeWindow : Window
 
     private void CreateFirstJob_Click(object sender, RoutedEventArgs e)
     {
-        var dashboard = new JobDashboardWindow();
-        dashboard.Closed += (_, _) => ((App)System.Windows.Application.Current).ShowMainWindow();
-        dashboard.Show();
+        var app = (App)System.Windows.Application.Current;
+        app.ShowMainWindow();
+        (app.MainWindow as MainWindow)?.StartNewJobDraft();
         Close();
     }
 

@@ -109,7 +109,7 @@ public partial class TargetEditorWindow : Window
         {
             if (string.IsNullOrWhiteSpace(DestinationPathBox.Text))
             {
-                MessageBox.Show(this, "Bitte einen Zielpfad angeben.", "SparkVault", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(this, "Bitte einen Zielpfad angeben.", "Geistes Funke", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return null;
             }
             target.DestinationPath = DestinationPathBox.Text.Trim();
@@ -120,22 +120,22 @@ public partial class TargetEditorWindow : Window
         {
             if (string.IsNullOrWhiteSpace(AccessKeyBox.Text))
             {
-                MessageBox.Show(this, "Bitte einen Access Key angeben.", "SparkVault", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(this, "Bitte einen Access Key angeben.", "Geistes Funke", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return null;
             }
             if (string.IsNullOrWhiteSpace(RegionBox.Text))
             {
-                MessageBox.Show(this, "Bitte eine Region angeben.", "SparkVault", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(this, "Bitte eine Region angeben.", "Geistes Funke", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return null;
             }
             if (string.IsNullOrWhiteSpace(BucketBox.Text))
             {
-                MessageBox.Show(this, "Bitte einen Bucket angeben.", "SparkVault", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(this, "Bitte einen Bucket angeben.", "Geistes Funke", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return null;
             }
             if (SecretKeyBox.Password.Length == 0 && _existingEncryptedSecretKey is null)
             {
-                MessageBox.Show(this, "Bitte einen Secret Key angeben.", "SparkVault", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(this, "Bitte einen Secret Key angeben.", "Geistes Funke", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return null;
             }
 
@@ -153,17 +153,17 @@ public partial class TargetEditorWindow : Window
 
         if (string.IsNullOrWhiteSpace(HostBox.Text))
         {
-            MessageBox.Show(this, "Bitte einen Host angeben.", "SparkVault", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(this, "Bitte einen Host angeben.", "Geistes Funke", MessageBoxButton.OK, MessageBoxImage.Warning);
             return null;
         }
         if (string.IsNullOrWhiteSpace(UsernameBox.Text))
         {
-            MessageBox.Show(this, "Bitte einen Benutzernamen angeben.", "SparkVault", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(this, "Bitte einen Benutzernamen angeben.", "Geistes Funke", MessageBoxButton.OK, MessageBoxImage.Warning);
             return null;
         }
         if (string.IsNullOrWhiteSpace(RemotePathBox.Text))
         {
-            MessageBox.Show(this, "Bitte einen Remote-Pfad angeben.", "SparkVault", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(this, "Bitte einen Remote-Pfad angeben.", "Geistes Funke", MessageBoxButton.OK, MessageBoxImage.Warning);
             return null;
         }
 
@@ -172,7 +172,7 @@ public partial class TargetEditorWindow : Window
         {
             if (!int.TryParse(PortBox.Text, out var parsedPort) || parsedPort <= 0)
             {
-                MessageBox.Show(this, "Bitte einen gültigen Port angeben (oder leer lassen).", "SparkVault",
+                MessageBox.Show(this, "Bitte einen gültigen Port angeben (oder leer lassen).", "Geistes Funke",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return null;
             }
@@ -206,7 +206,7 @@ public partial class TargetEditorWindow : Window
 
             if (string.IsNullOrEmpty(target.EncryptedPassword) && string.IsNullOrEmpty(target.PrivateKeyPath))
             {
-                MessageBox.Show(this, "Bitte Passwort und/oder privaten Schlüssel angeben.", "SparkVault",
+                MessageBox.Show(this, "Bitte Passwort und/oder privaten Schlüssel angeben.", "Geistes Funke",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return null;
             }
@@ -225,12 +225,12 @@ public partial class TargetEditorWindow : Window
         {
             await using var probe = TargetFactory.Create(target);
             var ok = await probe.TestConnectionAsync(CancellationToken.None);
-            MessageBox.Show(this, ok ? "Verbindung erfolgreich." : "Verbindung fehlgeschlagen.", "SparkVault",
+            MessageBox.Show(this, ok ? "Verbindung erfolgreich." : "Verbindung fehlgeschlagen.", "Geistes Funke",
                 MessageBoxButton.OK, ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"Verbindung fehlgeschlagen: {ex.Message}", "SparkVault",
+            MessageBox.Show(this, $"Verbindung fehlgeschlagen: {ex.Message}", "Geistes Funke",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         finally
