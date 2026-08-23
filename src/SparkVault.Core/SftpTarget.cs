@@ -94,6 +94,21 @@ public sealed class SftpTarget : IBackupTarget
         }
     }
 
+    public async Task DownloadAsync(string remotePath, string localDestinationPath, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await EnsureConnectedAsync(ct);
+
+        var full = RemotePath(remotePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(localDestinationPath)!);
+
+        await Task.Run(() =>
+        {
+            using var dest = File.Create(localDestinationPath);
+            _client.DownloadFile(full, dest);
+        }, ct);
+    }
+
     public async Task<IEnumerable<RemoteFileInfo>> ListExistingAsync(CancellationToken ct)
     {
         await EnsureConnectedAsync(ct);

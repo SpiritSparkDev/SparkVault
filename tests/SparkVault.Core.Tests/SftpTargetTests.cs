@@ -136,6 +136,36 @@ public class SftpTargetTests
     }
 
     [Fact]
+    public async Task DownloadAsync_UploadedFile_WritesIdenticalContentToDestination()
+    {
+        if (!DockerTestHelper.IsReachable(Host, Port)) return;
+
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-sftp-src-");
+        var restoreDir = Directory.CreateTempSubdirectory("sparkvault-sftp-restore-");
+        try
+        {
+            var filePath = Path.Combine(srcDir.FullName, "a.txt");
+            await File.WriteAllTextAsync(filePath, "hello sftp download");
+            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length);
+
+            await using var target = new SftpTarget(NewTestConfig());
+            await target.UploadAsync(file, progress: null, CancellationToken.None);
+
+            var restoredPath = Path.Combine(restoreDir.FullName, "restored-a.txt");
+            await target.DownloadAsync("a.txt", restoredPath, CancellationToken.None);
+
+            Assert.Equal("hello sftp download", await File.ReadAllTextAsync(restoredPath));
+
+            await target.DeleteAsync("a.txt", CancellationToken.None);
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
+            restoreDir.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task TestConnectionAsync_WrongCredentials_ReturnsFalse()
     {
         if (!DockerTestHelper.IsReachable(Host, Port)) return;
