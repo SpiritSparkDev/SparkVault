@@ -17,6 +17,8 @@ public partial class App : Application
 
     private BackgroundScheduler? _scheduler;
     private NotifyIcon? _trayIcon;
+    private bool _welcomeChecked;
+    private string _welcomeMarkerPath = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -32,6 +34,7 @@ public partial class App : Application
 
         var appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SparkVault");
         Directory.CreateDirectory(appDataDir);
+        _welcomeMarkerPath = Path.Combine(appDataDir, ".welcome-shown");
 
         Log.Logger = new LoggerConfiguration()
             .WriteTo.File(Path.Combine(appDataDir, "log.txt"), rollingInterval: RollingInterval.Day)
@@ -90,6 +93,12 @@ public partial class App : Application
 
         Runner.RunStarted += job => Dispatcher.BeginInvoke(() => SetTrayStatus(running: true, job.Name));
         Runner.RunCompleted += (job, status) => Dispatcher.BeginInvoke(() => SetTrayStatus(running: false, job.Name, status));
+
+        // First-ever launch: greet the user proactively instead of leaving them to discover the
+        // tray icon on their own before they've even created a job. Every later launch still
+        // starts silently in the tray, unchanged.
+        if (!File.Exists(_welcomeMarkerPath) && JobRepository.GetAll().Count == 0)
+            ShowMainWindow();
     }
 
     private static void EnsureAutostartRegistered()
@@ -136,8 +145,22 @@ public partial class App : Application
 
     private static string Truncate(string text) => text.Length <= 63 ? text : text[..63];
 
-    private void ShowMainWindow()
+    // First-ever launch (no jobs yet, welcome never shown before): greet the user and hand off
+    // to job creation instead of dropping them on an empty hero-card list with no explanation.
+    // A marker file (not a DB flag) keeps this one-time regardless of jobs being deleted later.
+    public void ShowMainWindow()
     {
+        if (!_welcomeChecked)
+        {
+            _welcomeChecked = true;
+            if (!File.Exists(_welcomeMarkerPath) && JobRepository.GetAll().Count == 0)
+            {
+                File.WriteAllText(_welcomeMarkerPath, "");
+                new WelcomeWindow().Show();
+                return;
+            }
+        }
+
         if (MainWindow is null)
         {
             MainWindow = new MainWindow();
