@@ -508,7 +508,7 @@ public partial class MainWindow : Window
             RestoreCurrentFileText.Text = p.CurrentFile;
         });
 
-        var restoreRunner = new RestoreRunner(App.RunFileRepository, App.Runner.RunLock, Serilog.Log.Logger);
+        var restoreRunner = new RestoreRunner(App.RunFileRepository, App.QuarantineRepository, App.Runner.RunLock, Serilog.Log.Logger);
 
         try
         {

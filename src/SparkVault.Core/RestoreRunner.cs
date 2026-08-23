@@ -5,12 +5,14 @@ namespace SparkVault.Core;
 public sealed class RestoreRunner
 {
     private readonly RunFileRepository _runFileRepository;
+    private readonly QuarantineRepository _quarantineRepository;
     private readonly SemaphoreSlim _runLock;
     private readonly ILogger _logger;
 
-    public RestoreRunner(RunFileRepository runFileRepository, SemaphoreSlim runLock, ILogger logger)
+    public RestoreRunner(RunFileRepository runFileRepository, QuarantineRepository quarantineRepository, SemaphoreSlim runLock, ILogger logger)
     {
         _runFileRepository = runFileRepository;
+        _quarantineRepository = quarantineRepository;
         _runLock = runLock;
         _logger = logger;
     }
@@ -51,7 +53,24 @@ public sealed class RestoreRunner
                 var tempDestination = localDestination + ".sparkvault-tmp";
                 try
                 {
-                    await target.DownloadAsync(file.RelativePath, tempDestination, ct);
+                    try
+                    {
+                        await target.DownloadAsync(file.RelativePath, tempDestination, ct);
+                    }
+                    catch (Exception primaryEx) when (primaryEx is not OperationCanceledException)
+                    {
+                        var quarantinePath = _quarantineRepository.GetLatestQuarantinePath(job.Id, targetConfig.Id, file.RelativePath);
+                        if (quarantinePath is null) throw;
+
+                        try
+                        {
+                            await target.DownloadAsync(quarantinePath, tempDestination, ct);
+                        }
+                        catch
+                        {
+                            throw primaryEx;
+                        }
+                    }
                     File.Move(tempDestination, localDestination, overwrite: true);
                 }
                 catch
