@@ -55,6 +55,25 @@ public class S3TargetTests
         Assert.NotNull(target);
     }
 
+    // S3-compatible providers are commonly documented with a bare host (e.g. IONOS Cloud's
+    // "s3.eu-central-3.ionoscloud.com"); the AWS SDK throws AmazonClientException("... not a
+    // valid URL") at AmazonS3Client construction time without an explicit scheme. Verified this
+    // reproduces against the real SDK before the fix and is resolved after it.
+    [Fact]
+    public void Constructor_EndpointWithoutScheme_DoesNotThrow()
+    {
+        var target = new S3Target(new BackupTarget
+        {
+            Type = TargetType.S3,
+            Bucket = "b",
+            AccessKey = "a",
+            Region = "eu-central-3",
+            Endpoint = "s3.eu-central-3.ionoscloud.com",
+            EncryptedSecretKey = CredentialProtector.Protect("s"),
+        });
+        Assert.NotNull(target);
+    }
+
     [Fact]
     public async Task UploadAsync_UploadsVerifiesAndListsFile()
     {

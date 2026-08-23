@@ -23,7 +23,13 @@ public sealed class S3Target : IBackupTarget
         var s3Config = new AmazonS3Config();
         if (!string.IsNullOrEmpty(config.Endpoint))
         {
-            s3Config.ServiceURL = config.Endpoint;
+            // S3-compatible providers are documented with a bare host (e.g.
+            // "s3.eu-central-3.ionoscloud.com"); the SDK rejects that as "not a valid URL"
+            // without an explicit scheme, so default to https when the user omits one.
+            var endpoint = config.Endpoint.Contains("://", StringComparison.Ordinal)
+                ? config.Endpoint
+                : $"https://{config.Endpoint}";
+            s3Config.ServiceURL = endpoint;
             s3Config.ForcePathStyle = true;
             s3Config.AuthenticationRegion = region;
         }
