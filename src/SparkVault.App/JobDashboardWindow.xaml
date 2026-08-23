@@ -11,6 +11,8 @@
                                Margin="16,16,16,16" TextTrimming="CharacterEllipsis"/>
                     <RadioButton x:Name="NavOverview" Content="Übersicht" GroupName="Nav"
                                  Style="{StaticResource SidebarNavStyle}" Checked="Nav_Checked"/>
+                    <RadioButton x:Name="NavFiles" Content="Dateiauswahl" GroupName="Nav"
+                                 Style="{StaticResource SidebarNavStyle}" Checked="Nav_Checked"/>
                     <RadioButton x:Name="NavHistory" Content="Verlauf" GroupName="Nav"
                                  Style="{StaticResource SidebarNavStyle}" Checked="Nav_Checked"/>
                     <RadioButton x:Name="NavSettings" Content="Einstellungen" GroupName="Nav"
@@ -105,6 +107,46 @@
                     </UniformGrid>
                 </StackPanel>
             </StackPanel>
+
+            <!-- Dateiauswahl -->
+            <DockPanel x:Name="FilesPanel" Visibility="Collapsed" LastChildFill="True">
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,16">
+                    <TextBlock Text="Dateiauswahl" Style="{StaticResource HeadingTextStyle}" FontSize="22" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="FilesSelectedSizeText" Style="{StaticResource MutedTextStyle}"
+                               Margin="14,0,0,0" VerticalAlignment="Center"/>
+                </DockPanel>
+                <ListBox x:Name="FoldersListBox" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="0,0,0,8"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <ContentPresenter/>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource CardStyle}">
+                                <DockPanel>
+                                    <TextBlock Text="{Binding SizeDisplay}" Style="{StaticResource MutedTextStyle}"
+                                               DockPanel.Dock="Right" VerticalAlignment="Center"/>
+                                    <CheckBox IsChecked="{Binding IsIncluded}" Checked="FolderCheckBox_Changed" Unchecked="FolderCheckBox_Changed"
+                                              VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding FullPath}" Style="{StaticResource MutedTextStyle}" FontFamily="Consolas" FontSize="11"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
 
             <!-- Verlauf -->
             <DataGrid x:Name="HistoryGrid" Visibility="Collapsed" AutoGenerateColumns="False" IsReadOnly="True">

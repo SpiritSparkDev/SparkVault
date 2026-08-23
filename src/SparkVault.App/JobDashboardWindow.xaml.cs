@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using SparkVault.Core;
 
@@ -6,6 +7,15 @@ namespace SparkVault.App;
 public partial class JobDashboardWindow : Window
 {
     private sealed record HistoryRow(DateTime StartedAt, DateTime? EndedAt, string Target, RunStatus Status, int FileCount, long TotalBytes, string? ErrorMessage);
+
+    private sealed class FolderRow
+    {
+        public required string Name { get; init; }
+        public required string FullPath { get; init; }
+        public required long Size { get; init; }
+        public required bool IsIncluded { get; set; }
+        public string SizeDisplay => FormatBytes(Size);
+    }
 
     private readonly int _jobId;
     private CancellationTokenSource? _runCts;
@@ -26,11 +36,73 @@ public partial class JobDashboardWindow : Window
     private void Nav_Checked(object sender, RoutedEventArgs e)
     {
         OverviewPanel.Visibility = NavOverview.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        FilesPanel.Visibility = NavFiles.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         HistoryGrid.Visibility = NavHistory.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         SettingsPanel.Visibility = NavSettings.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
 
+        if (NavFiles.IsChecked == true) LoadFiles();
         if (NavHistory.IsChecked == true) LoadHistory();
         if (NavSettings.IsChecked == true) LoadSettings();
+    }
+
+    // A folder is "included" unless something already excludes everything under it — covers
+    // both a toggle from this tab ("{Name}/*") and a matching pattern the user typed by hand
+    // in the Ausschlussmuster box (e.g. "Downloads/*" or "Downloads/**").
+    private static string ExcludeAllPattern(string folderName) => $"{folderName}/*";
+
+    private void LoadFiles()
+    {
+        var job = CurrentJob;
+        if (job is null) return;
+
+        if (!Directory.Exists(job.SourcePath))
+        {
+            FoldersListBox.ItemsSource = null;
+            FilesSelectedSizeText.Text = "Quellpfad nicht gefunden.";
+            return;
+        }
+
+        var rows = new List<FolderRow>();
+        foreach (var dir in Directory.EnumerateDirectories(job.SourcePath))
+        {
+            var name = Path.GetFileName(dir);
+            long size;
+            try
+            {
+                size = FileScanner.Scan(dir, Enumerable.Empty<string>()).Sum(f => f.Size);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                size = 0;
+            }
+
+            rows.Add(new FolderRow
+            {
+                Name = name,
+                FullPath = dir,
+                Size = size,
+                IsIncluded = !job.ExcludePatterns.Contains(ExcludeAllPattern(name), StringComparer.OrdinalIgnoreCase),
+            });
+        }
+
+        FoldersListBox.ItemsSource = rows;
+        FilesSelectedSizeText.Text = $"{FormatBytes(rows.Where(r => r.IsIncluded).Sum(r => r.Size))} ausgewählt";
+    }
+
+    private void FolderCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.CheckBox { DataContext: FolderRow row }) return;
+        var job = CurrentJob;
+        if (job is null) return;
+
+        var pattern = ExcludeAllPattern(row.Name);
+        if (row.IsIncluded)
+            job.ExcludePatterns.RemoveAll(p => string.Equals(p, pattern, StringComparison.OrdinalIgnoreCase));
+        else if (!job.ExcludePatterns.Contains(pattern, StringComparer.OrdinalIgnoreCase))
+            job.ExcludePatterns.Add(pattern);
+
+        App.JobRepository.Update(job);
+        FilesSelectedSizeText.Text = $"{FormatBytes(((List<FolderRow>)FoldersListBox.ItemsSource).Where(r => r.IsIncluded).Sum(r => r.Size))} ausgewählt";
     }
 
     private void LoadOverview()
