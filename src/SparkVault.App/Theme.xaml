@@ -26,22 +26,27 @@
         <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}"/>
     </Style>
 
+    <!-- No Foreground setter here on purpose: TextBlock is the base type AccessText renders
+         through (used by every Button/RadioButton's mnemonic-aware ContentPresenter), and an
+         implicit Style Setter on it would outrank whatever Foreground the containing Button
+         inherited down — silently overriding e.g. PrimaryButtonStyle's dark text with this
+         value. Foreground instead comes from each Window's own explicit attribute (below) via
+         ordinary inheritance, which every more-specific style (HeadingTextStyle, button styles,
+         SidebarNavStyle, ...) still correctly overrides for itself. -->
     <Style TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource BodyFont}"/>
         <Setter Property="FontSize" Value="13"/>
-        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
     </Style>
 
     <Style TargetType="Label">
         <Setter Property="FontFamily" Value="{StaticResource BodyFont}"/>
-        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
     </Style>
 
     <!-- Window: the implicit TargetType="Window" style does not reliably apply in this app
          (confirmed empirically — explicit local attributes render, this implicit style silently
          does not), so every Window sets Background="{DynamicResource WindowBackgroundBrush}"
-         FontFamily="{StaticResource BodyFont}" Icon="pack://application:,,,/Assets/icon.ico"
-         directly on itself instead. -->
+         Foreground="{DynamicResource TextBrush}" FontFamily="{StaticResource BodyFont}"
+         Icon="pack://application:,,,/Assets/icon.ico" directly on itself instead. -->
 
 
     <!-- Buttons: primary is the gold CTA (glowing), secondary is outlined purple-on-dark,
@@ -59,17 +64,27 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Bd" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}"
-                            CornerRadius="8" Effect="{StaticResource GoldGlowEffect}">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
-                    </Border>
+                    <Grid>
+                        <!-- Glow lives on its own layer behind the text. A DropShadowEffect
+                             applies to everything it's attached to, including child content —
+                             putting it on the same Border as the ContentPresenter blurred the
+                             button's own text along with the intended halo around the pill. -->
+                        <Border x:Name="Glow" Background="{TemplateBinding Background}" CornerRadius="8"
+                                Effect="{StaticResource GoldGlowEffect}"/>
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}"
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                        </Border>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Accent2_100Brush}"/>
+                            <Setter TargetName="Glow" Property="Background" Value="{DynamicResource Accent2_100Brush}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
-                            <Setter TargetName="Bd" Property="Effect" Value="{x:Null}"/>
+                            <Setter TargetName="Glow" Property="Effect" Value="{x:Null}"/>
+                            <Setter TargetName="Glow" Property="Opacity" Value="0"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Einstellungen" Height="260" Width="360" WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        Background="{DynamicResource WindowBackgroundBrush}" FontFamily="{StaticResource BodyFont}"
+        Background="{DynamicResource WindowBackgroundBrush}" Foreground="{DynamicResource TextBrush}" FontFamily="{StaticResource BodyFont}"
         Icon="pack://application:,,,/Assets/icon.ico">
     <StackPanel Margin="24">
         <TextBlock Text="Einstellungen" Style="{StaticResource HeadingTextStyle}" FontSize="20" Margin="0,0,0,16"/>

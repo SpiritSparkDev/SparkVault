@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:SparkVault.App"
         Title="Geistes Funke" Height="680" Width="980"
-        Background="{DynamicResource WindowBackgroundBrush}" FontFamily="{StaticResource BodyFont}"
+        Background="{DynamicResource WindowBackgroundBrush}" Foreground="{DynamicResource TextBrush}" FontFamily="{StaticResource BodyFont}"
         Icon="pack://application:,,,/Assets/icon.ico"
         Closing="Window_Closing">
     <DockPanel>
