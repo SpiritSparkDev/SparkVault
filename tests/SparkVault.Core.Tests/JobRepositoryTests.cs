@@ -55,6 +55,37 @@ public class JobRepositoryTests
     }
 
     [Fact]
+    public void AddThenGetById_RoundTripsVerifyTargetBeforeRun()
+    {
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var repo = new JobRepository(connectionString);
+
+            var id = repo.Add(new BackupJob
+            {
+                Name = "Verified",
+                SourcePath = "C:\\a",
+                VerifyTargetBeforeRun = true,
+                Targets = new List<BackupTarget> { new() { Type = TargetType.Local, DestinationPath = "C:\\a1" } },
+            });
+
+            Assert.True(repo.GetById(id)!.VerifyTargetBeforeRun);
+
+            var job = repo.GetById(id)!;
+            job.VerifyTargetBeforeRun = false;
+            repo.Update(job);
+
+            Assert.False(repo.GetById(id)!.VerifyTargetBeforeRun);
+        }
+        finally
+        {
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
+
+    [Fact]
     public void AddThenGetById_RoundTripsWeeklyAndMonthlySchedule()
     {
         var connectionString = NewTempDbConnectionString(out var dbPath);

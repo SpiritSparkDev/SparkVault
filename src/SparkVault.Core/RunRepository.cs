@@ -75,6 +75,20 @@ public sealed class RunRepository
         return reader.Read() ? ReadRun(reader) : null;
     }
 
+    public BackupRun? GetLatestSuccessfulRun(int jobId, int targetId)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM Runs WHERE JobId = $jobId AND TargetId = $targetId AND Status = 'Success' ORDER BY StartedAt DESC LIMIT 1;";
+        command.Parameters.AddWithValue("$jobId", jobId);
+        command.Parameters.AddWithValue("$targetId", targetId);
+
+        using var reader = command.ExecuteReader();
+        return reader.Read() ? ReadRun(reader) : null;
+    }
+
     public List<BackupRun> GetByRunGroupId(Guid runGroupId)
     {
         using var connection = new SqliteConnection(_connectionString);

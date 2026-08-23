@@ -72,6 +72,60 @@ public class RunRepositoryTests
     }
 
     [Fact]
+    public void GetLatestSuccessfulRun_IgnoresFailedRunsAndOtherTargets()
+    {
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var jobRepo = new JobRepository(connectionString);
+            var jobId = jobRepo.Add(new BackupJob
+            {
+                Name = "A",
+                SourcePath = "C:\\a",
+                Targets = new List<BackupTarget>
+                {
+                    new() { Type = TargetType.Local, DestinationPath = "D:\\a" },
+                    new() { Type = TargetType.Local, DestinationPath = "D:\\b" },
+                },
+            });
+            var targetIds = jobRepo.GetById(jobId)!.Targets.Select(t => t.Id).ToList();
+
+            var runRepo = new RunRepository(connectionString);
+            runRepo.Add(new BackupRun { JobId = jobId, TargetId = targetIds[0], RunGroupId = Guid.NewGuid(), StartedAt = DateTime.UtcNow.AddHours(-2), Status = RunStatus.Success });
+            runRepo.Add(new BackupRun { JobId = jobId, TargetId = targetIds[0], RunGroupId = Guid.NewGuid(), StartedAt = DateTime.UtcNow.AddHours(-1), Status = RunStatus.Failed });
+            runRepo.Add(new BackupRun { JobId = jobId, TargetId = targetIds[1], RunGroupId = Guid.NewGuid(), StartedAt = DateTime.UtcNow, Status = RunStatus.Success });
+
+            var latest = runRepo.GetLatestSuccessfulRun(jobId, targetIds[0]);
+
+            Assert.NotNull(latest);
+            Assert.Equal(RunStatus.Success, latest!.Status);
+            Assert.Equal(targetIds[0], latest.TargetId);
+        }
+        finally
+        {
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
+
+    [Fact]
+    public void GetLatestSuccessfulRun_NoSuccessfulRuns_ReturnsNull()
+    {
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var runRepo = new RunRepository(connectionString);
+
+            Assert.Null(runRepo.GetLatestSuccessfulRun(999, 999));
+        }
+        finally
+        {
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
+
+    [Fact]
     public void GetByRunGroupId_ReturnsAllTargetsOfThatRun()
     {
         var connectionString = NewTempDbConnectionString(out var dbPath);

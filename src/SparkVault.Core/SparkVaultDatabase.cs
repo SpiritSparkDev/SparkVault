@@ -23,7 +23,8 @@ public static class SparkVaultDatabase
                 IntervalHours INTEGER NULL,
                 DailyAtTime TEXT NULL,
                 WeeklyDay TEXT NULL,
-                MonthlyDay INTEGER NULL
+                MonthlyDay INTEGER NULL,
+                VerifyTargetBeforeRun INTEGER NOT NULL DEFAULT 0
             );
 
             CREATE TABLE IF NOT EXISTS Targets (
@@ -68,6 +69,17 @@ public static class SparkVaultDatabase
             );
 
             CREATE INDEX IF NOT EXISTS IX_RunFiles_RunId ON RunFiles(RunId);
+
+            CREATE TABLE IF NOT EXISTS QuarantinedFiles (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                JobId INTEGER NOT NULL,
+                TargetId INTEGER NOT NULL,
+                OriginalRelativePath TEXT NOT NULL,
+                QuarantinePath TEXT NOT NULL,
+                QuarantinedAtRunId INTEGER NOT NULL,
+                QuarantinedAtUtc TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS IX_QuarantinedFiles_Lookup ON QuarantinedFiles(JobId, TargetId, OriginalRelativePath);
             """;
         command.ExecuteNonQuery();
 
@@ -78,6 +90,7 @@ public static class SparkVaultDatabase
         EnsureColumn(connection, "Jobs", "WeeklyDay", "TEXT NULL");
         EnsureColumn(connection, "Jobs", "MonthlyDay", "INTEGER NULL");
         EnsureColumn(connection, "RunFiles", "SourceModifiedUtc", "TEXT NULL");
+        EnsureColumn(connection, "Jobs", "VerifyTargetBeforeRun", "INTEGER NOT NULL DEFAULT 0");
     }
 
     private static void EnsureColumn(SqliteConnection connection, string table, string column, string definition)

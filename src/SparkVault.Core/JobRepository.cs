@@ -20,8 +20,8 @@ public sealed class JobRepository
             connection.Open();
             var command = connection.CreateCommand();
             command.CommandText = """
-                INSERT INTO Jobs (Name, SourcePath, ExcludePatterns, ScheduleType, IntervalHours, DailyAtTime, WeeklyDay, MonthlyDay)
-                VALUES ($name, $source, $exclude, $scheduleType, $intervalHours, $dailyAtTime, $weeklyDay, $monthlyDay);
+                INSERT INTO Jobs (Name, SourcePath, ExcludePatterns, ScheduleType, IntervalHours, DailyAtTime, WeeklyDay, MonthlyDay, VerifyTargetBeforeRun)
+                VALUES ($name, $source, $exclude, $scheduleType, $intervalHours, $dailyAtTime, $weeklyDay, $monthlyDay, $verifyTargetBeforeRun);
                 SELECT last_insert_rowid();
                 """;
             BindJobParameters(command, job);
@@ -47,7 +47,7 @@ public sealed class JobRepository
                 UPDATE Jobs
                 SET Name = $name, SourcePath = $source, ExcludePatterns = $exclude,
                     ScheduleType = $scheduleType, IntervalHours = $intervalHours, DailyAtTime = $dailyAtTime,
-                    WeeklyDay = $weeklyDay, MonthlyDay = $monthlyDay
+                    WeeklyDay = $weeklyDay, MonthlyDay = $monthlyDay, VerifyTargetBeforeRun = $verifyTargetBeforeRun
                 WHERE Id = $id;
                 """;
             BindJobParameters(command, job);
@@ -133,6 +133,7 @@ public sealed class JobRepository
         command.Parameters.AddWithValue("$dailyAtTime", (object?)job.DailyAtTime?.ToString("HH:mm") ?? DBNull.Value);
         command.Parameters.AddWithValue("$weeklyDay", (object?)job.WeeklyDay?.ToString() ?? DBNull.Value);
         command.Parameters.AddWithValue("$monthlyDay", (object?)job.MonthlyDay ?? DBNull.Value);
+        command.Parameters.AddWithValue("$verifyTargetBeforeRun", job.VerifyTargetBeforeRun ? 1 : 0);
     }
 
     private static BackupJob ReadJob(SqliteDataReader reader)
@@ -151,6 +152,7 @@ public sealed class JobRepository
             DailyAtTime = reader.IsDBNull(reader.GetOrdinal("DailyAtTime")) ? null : TimeOnly.Parse(reader.GetString(reader.GetOrdinal("DailyAtTime"))),
             WeeklyDay = reader.IsDBNull(reader.GetOrdinal("WeeklyDay")) ? null : Enum.Parse<DayOfWeek>(reader.GetString(reader.GetOrdinal("WeeklyDay"))),
             MonthlyDay = reader.IsDBNull(reader.GetOrdinal("MonthlyDay")) ? null : reader.GetInt32(reader.GetOrdinal("MonthlyDay")),
+            VerifyTargetBeforeRun = reader.GetInt32(reader.GetOrdinal("VerifyTargetBeforeRun")) != 0,
         };
     }
 }
