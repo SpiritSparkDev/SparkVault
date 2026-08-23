@@ -8,6 +8,7 @@ public interface IBackupTarget : IAsyncDisposable
 {
     Task<bool> TestConnectionAsync(CancellationToken ct);
     Task UploadAsync(BackupFile file, IProgress<TransferProgress>? progress, CancellationToken ct);
+    Task DownloadAsync(string remotePath, string localDestinationPath, CancellationToken ct);
     Task<IEnumerable<RemoteFileInfo>> ListExistingAsync(CancellationToken ct);
     Task DeleteAsync(string remotePath, CancellationToken ct);
 }

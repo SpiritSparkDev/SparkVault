@@ -56,6 +56,15 @@ public sealed class LocalTarget : IBackupTarget
         }
     }
 
+    public Task DownloadAsync(string remotePath, string localDestinationPath, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var sourcePath = Path.Combine(_destinationRoot, remotePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(localDestinationPath)!);
+        File.Copy(sourcePath, localDestinationPath, overwrite: true);
+        return Task.CompletedTask;
+    }
+
     public Task<IEnumerable<RemoteFileInfo>> ListExistingAsync(CancellationToken ct)
     {
         if (!Directory.Exists(_destinationRoot))

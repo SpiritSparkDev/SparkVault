@@ -126,4 +126,32 @@ public class LocalTargetTests
                 destDir.Delete(recursive: true);
         }
     }
+
+    [Fact]
+    public async Task DownloadAsync_UploadedFile_WritesIdenticalContentToDestination()
+    {
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-local-src-");
+        var destDir = Directory.CreateTempSubdirectory("sparkvault-local-dest-");
+        var restoreDir = Directory.CreateTempSubdirectory("sparkvault-local-restore-");
+        try
+        {
+            var filePath = Path.Combine(srcDir.FullName, "a.txt");
+            await File.WriteAllTextAsync(filePath, "hello local download");
+            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length);
+
+            await using var target = new LocalTarget(destDir.FullName);
+            await target.UploadAsync(file, progress: null, CancellationToken.None);
+
+            var restoredPath = Path.Combine(restoreDir.FullName, "restored-a.txt");
+            await target.DownloadAsync("a.txt", restoredPath, CancellationToken.None);
+
+            Assert.Equal("hello local download", await File.ReadAllTextAsync(restoredPath));
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
+            destDir.Delete(recursive: true);
+            restoreDir.Delete(recursive: true);
+        }
+    }
 }
