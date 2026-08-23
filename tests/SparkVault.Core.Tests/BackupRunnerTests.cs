@@ -392,4 +392,54 @@ public class BackupRunnerTests
             if (File.Exists(dbPath)) File.Delete(dbPath);
         }
     }
+
+    [Fact]
+    public async Task RunAsync_PausedBetweenFiles_WaitsForResumeThenFinishes()
+    {
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-src-");
+        var destDir = Directory.CreateTempSubdirectory("sparkvault-dest-");
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            File.WriteAllText(Path.Combine(srcDir.FullName, "a.txt"), "hello");
+            File.WriteAllText(Path.Combine(srcDir.FullName, "b.txt"), "world!");
+
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var jobRepo = new JobRepository(connectionString);
+            var jobId = jobRepo.Add(new BackupJob
+            {
+                Name = "Test",
+                SourcePath = srcDir.FullName,
+                Targets = new List<BackupTarget> { new() { Type = TargetType.Local, DestinationPath = destDir.FullName } },
+            });
+            var job = jobRepo.GetById(jobId)!;
+
+            var runRepo = new RunRepository(connectionString);
+            var runner = new BackupRunner(runRepo, Log.Logger);
+
+            // Paused before the run starts (not from a Progress<T> callback — Progress.Report
+            // marshals to the captured context asynchronously, so a Pause() called from inside
+            // one races the loop instead of reliably blocking it).
+            var pauseToken = new PauseToken();
+            pauseToken.Pause();
+            _ = Task.Delay(150).ContinueWith(_ => pauseToken.Resume());
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var results = await runner.RunAsync(job, progress: null, CancellationToken.None, pauseToken);
+            sw.Stop();
+
+            Assert.Single(results);
+            Assert.Equal(RunStatus.Success, results[0].Status);
+            Assert.Equal(2, results[0].FileCount);
+            Assert.True(sw.ElapsedMilliseconds >= 140, $"Expected the run to be delayed by the pause, took {sw.ElapsedMilliseconds}ms");
+            Assert.True(File.Exists(Path.Combine(destDir.FullName, "Test", "a.txt")));
+            Assert.True(File.Exists(Path.Combine(destDir.FullName, "Test", "b.txt")));
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
+            destDir.Delete(recursive: true);
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
 }

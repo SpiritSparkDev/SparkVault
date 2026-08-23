@@ -21,7 +21,7 @@ public sealed class BackupRunner
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<BackupRun>> RunAsync(BackupJob job, IProgress<TransferProgress>? progress, CancellationToken ct)
+    public async Task<IReadOnlyList<BackupRun>> RunAsync(BackupJob job, IProgress<TransferProgress>? progress, CancellationToken ct, PauseToken? pauseToken = null)
     {
         RunStarted?.Invoke(job);
         var runGroupId = Guid.NewGuid();
@@ -63,7 +63,7 @@ public sealed class BackupRunner
                         continue;
                     }
 
-                    results.Add(await RunForTargetAsync(job, targetConfig, runGroupId, files, progress, ct));
+                    results.Add(await RunForTargetAsync(job, targetConfig, runGroupId, files, progress, ct, pauseToken));
                 }
             }
         }
@@ -83,7 +83,7 @@ public sealed class BackupRunner
 
     private async Task<BackupRun> RunForTargetAsync(
         BackupJob job, BackupTarget targetConfig, Guid runGroupId, IReadOnlyList<BackupFile> files,
-        IProgress<TransferProgress>? progress, CancellationToken ct)
+        IProgress<TransferProgress>? progress, CancellationToken ct, PauseToken? pauseToken)
     {
         var run = new BackupRun
         {
@@ -111,6 +111,7 @@ public sealed class BackupRunner
             foreach (var file in files)
             {
                 ct.ThrowIfCancellationRequested();
+                if (pauseToken is not null) await pauseToken.WaitIfPausedAsync(ct);
                 progress?.Report(new TransferProgress(done, files.Count, bytesDone, totalBytes, file.RelativePath));
                 await target.UploadAsync(file, progress, ct);
                 done++;
