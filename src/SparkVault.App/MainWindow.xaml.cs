@@ -20,7 +20,6 @@ public sealed class JobRow
 public partial class MainWindow : Window
 {
     private readonly ObservableCollection<JobRow> _jobs = new();
-    private CancellationTokenSource? _runCts;
 
     public MainWindow()
     {
@@ -54,7 +53,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private static string DescribeNextRun(BackupJob job, DateTime? lastRunStartedAt)
+    internal static string DescribeNextRun(BackupJob job, DateTime? lastRunStartedAt)
     {
         switch (job.ScheduleType)
         {
@@ -81,12 +80,10 @@ public partial class MainWindow : Window
             ReloadJobs();
     }
 
-    private void EditJobButton_Click(object sender, RoutedEventArgs e)
+    private void OpenJobButton_Click(object sender, RoutedEventArgs e)
     {
         if (SelectedJob is null) return;
-        var editor = new JobEditorWindow(jobId: SelectedJob.Id) { Owner = this };
-        if (editor.ShowDialog() == true)
-            ReloadJobs();
+        new JobDashboardWindow(SelectedJob.Id).Show();
     }
 
     private void DeleteJobButton_Click(object sender, RoutedEventArgs e)
@@ -101,54 +98,9 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void RunNowButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (SelectedJob is null) return;
-        var job = App.JobRepository.GetById(SelectedJob.Id);
-        if (job is null) return;
-
-        RunNowButton.IsEnabled = false;
-        CancelButton.IsEnabled = true;
-        RunProgressBar.Value = 0;
-        CurrentFileText.Text = "";
-        _runCts = new CancellationTokenSource();
-        var progress = new Progress<TransferProgress>(p =>
-        {
-            RunProgressBar.Value = p.FilesTotal == 0 ? 0 : (double)p.FilesDone / p.FilesTotal * 100;
-            CurrentFileText.Text = p.CurrentFile;
-        });
-
-        try
-        {
-            await App.Runner.RunAsync(job, progress, _runCts.Token);
-        }
-        finally
-        {
-            RunNowButton.IsEnabled = true;
-            CancelButton.IsEnabled = false;
-            RunProgressBar.Value = 0;
-            CurrentFileText.Text = "";
-            _runCts.Dispose();
-            _runCts = null;
-            ReloadJobs();
-        }
-    }
-
-    private void CancelButton_Click(object sender, RoutedEventArgs e)
-    {
-        _runCts?.Cancel();
-    }
-
     private void JobsGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        EditJobButton_Click(sender, e);
-    }
-
-    private void ShowLogButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (SelectedJob is null) return;
-        var logWindow = new LogWindow(SelectedJob.Id, SelectedJob.Name) { Owner = this };
-        logWindow.Show();
+        OpenJobButton_Click(sender, e);
     }
 
     private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)

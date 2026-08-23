@@ -1,0 +1,114 @@
+<Window x:Class="SparkVault.App.JobDashboardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SparkVault" Height="640" Width="900" WindowStartupLocation="CenterScreen">
+    <DockPanel>
+        <!-- Sidebar -->
+        <StackPanel DockPanel.Dock="Left" Width="180" Background="{StaticResource SurfaceBrush}">
+            <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0" Height="640">
+                <StackPanel>
+                    <TextBlock x:Name="JobNameHeader" Text="Job" Style="{StaticResource HeadingTextStyle}"
+                               Margin="16,16,16,16" TextTrimming="CharacterEllipsis"/>
+                    <RadioButton x:Name="NavOverview" Content="Übersicht" GroupName="Nav"
+                                 Style="{StaticResource SidebarNavStyle}" Checked="Nav_Checked"/>
+                    <RadioButton x:Name="NavHistory" Content="Verlauf" GroupName="Nav"
+                                 Style="{StaticResource SidebarNavStyle}" Checked="Nav_Checked"/>
+                    <RadioButton x:Name="NavSettings" Content="Einstellungen" GroupName="Nav"
+                                 Style="{StaticResource SidebarNavStyle}" Checked="Nav_Checked"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <Grid Margin="28,24,28,24">
+            <!-- Übersicht -->
+            <StackPanel x:Name="OverviewPanel">
+                <TextBlock Text="Übersicht" Style="{StaticResource HeadingTextStyle}" FontSize="22" Margin="0,0,0,16"/>
+
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                    <DockPanel>
+                        <Ellipse x:Name="StatusDot" Width="12" Height="12" Fill="{StaticResource AccentBrush}"
+                                 DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                        <Button x:Name="RunNowButton" Content="Jetzt sichern" Style="{StaticResource PrimaryButtonStyle}"
+                                DockPanel.Dock="Right" Click="RunNowButton_Click"/>
+                        <Button x:Name="CancelButton" Content="Abbrechen" Style="{StaticResource GhostButtonStyle}"
+                                DockPanel.Dock="Right" Margin="0,0,8,0" Click="CancelButton_Click" IsEnabled="False"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock x:Name="StatusTitleText" Text="Noch kein Backup" Style="{StaticResource HeadingTextStyle}" FontSize="16"/>
+                            <TextBlock x:Name="StatusMetaText" Text="" Style="{StaticResource MutedTextStyle}"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+
+                <StackPanel x:Name="ProgressPanel" Visibility="Collapsed" Margin="0,0,0,16">
+                    <ProgressBar x:Name="RunProgressBar" Height="6" Minimum="0" Maximum="100"/>
+                    <TextBlock x:Name="CurrentFileText" Style="{StaticResource MutedTextStyle}" Margin="0,6,0,0"
+                               FontFamily="Consolas" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+
+                <UniformGrid Columns="3" Rows="1">
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,7,0">
+                        <StackPanel>
+                            <TextBlock Text="NÄCHSTES BACKUP" Style="{StaticResource MutedTextStyle}"/>
+                            <TextBlock x:Name="NextRunText" Style="{StaticResource HeadingTextStyle}" FontSize="16" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource CardStyle}" Margin="7,0,7,0">
+                        <StackPanel>
+                            <TextBlock Text="ZIELE" Style="{StaticResource MutedTextStyle}"/>
+                            <TextBlock x:Name="TargetsText" Style="{StaticResource HeadingTextStyle}" FontSize="16" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource CardStyle}" Margin="7,0,0,0">
+                        <StackPanel>
+                            <TextBlock Text="LETZTE GRÖSSE" Style="{StaticResource MutedTextStyle}"/>
+                            <TextBlock x:Name="LastSizeText" Style="{StaticResource HeadingTextStyle}" FontSize="16" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </UniformGrid>
+            </StackPanel>
+
+            <!-- Verlauf -->
+            <DataGrid x:Name="HistoryGrid" Visibility="Collapsed" AutoGenerateColumns="False" IsReadOnly="True">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Start" Binding="{Binding StartedAt}" Width="140"/>
+                    <DataGridTextColumn Header="Ende" Binding="{Binding EndedAt}" Width="140"/>
+                    <DataGridTextColumn Header="Ziel" Binding="{Binding Target}" Width="160"/>
+                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="80"/>
+                    <DataGridTextColumn Header="Dateien" Binding="{Binding FileCount}" Width="70"/>
+                    <DataGridTextColumn Header="Bytes" Binding="{Binding TotalBytes}" Width="90"/>
+                    <DataGridTextColumn Header="Fehler" Binding="{Binding ErrorMessage}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <!-- Einstellungen -->
+            <StackPanel x:Name="SettingsPanel" Visibility="Collapsed">
+                <TextBlock Text="Einstellungen" Style="{StaticResource HeadingTextStyle}" FontSize="22" Margin="0,0,0,16"/>
+
+                <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="0,14">
+                    <DockPanel>
+                        <Button Content="Bearbeiten" Style="{StaticResource SecondaryButtonStyle}" DockPanel.Dock="Right" Click="EditSettings_Click"/>
+                        <StackPanel><TextBlock Text="Name" FontWeight="SemiBold"/><TextBlock x:Name="SettingsNameText" Style="{StaticResource MutedTextStyle}"/></StackPanel>
+                    </DockPanel>
+                </Border>
+                <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="0,14">
+                    <DockPanel>
+                        <Button Content="Bearbeiten" Style="{StaticResource SecondaryButtonStyle}" DockPanel.Dock="Right" Click="EditSettings_Click"/>
+                        <StackPanel><TextBlock Text="Quellpfad" FontWeight="SemiBold"/><TextBlock x:Name="SettingsSourceText" Style="{StaticResource MutedTextStyle}"/></StackPanel>
+                    </DockPanel>
+                </Border>
+                <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="0,14">
+                    <DockPanel>
+                        <Button Content="Bearbeiten" Style="{StaticResource SecondaryButtonStyle}" DockPanel.Dock="Right" Click="EditSettings_Click"/>
+                        <StackPanel><TextBlock Text="Ziele" FontWeight="SemiBold"/><TextBlock x:Name="SettingsTargetsText" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap"/></StackPanel>
+                    </DockPanel>
+                </Border>
+                <Border Padding="0,14">
+                    <DockPanel>
+                        <Button Content="Bearbeiten" Style="{StaticResource SecondaryButtonStyle}" DockPanel.Dock="Right" Click="EditSettings_Click"/>
+                        <StackPanel><TextBlock Text="Zeitplan" FontWeight="SemiBold"/><TextBlock x:Name="SettingsScheduleText" Style="{StaticResource MutedTextStyle}"/></StackPanel>
+                    </DockPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </DockPanel>
+</Window>

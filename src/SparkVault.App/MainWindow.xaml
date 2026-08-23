@@ -5,14 +5,9 @@
         Closing="Window_Closing">
     <DockPanel Margin="12">
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
-            <Button x:Name="AddJobButton" Content="Neuer Job" Padding="8,4" Click="AddJobButton_Click" />
-            <Button x:Name="EditJobButton" Content="Bearbeiten" Padding="8,4" Margin="8,0,0,0" Click="EditJobButton_Click" />
-            <Button x:Name="DeleteJobButton" Content="Löschen" Padding="8,4" Margin="8,0,0,0" Click="DeleteJobButton_Click" />
-            <Button x:Name="RunNowButton" Content="Jetzt sichern" Style="{StaticResource PrimaryButtonStyle}" Padding="8,4" Margin="8,0,0,0" Click="RunNowButton_Click" />
-            <Button x:Name="CancelButton" Content="Abbrechen" Style="{StaticResource GhostButtonStyle}" Padding="8,4" Margin="8,0,0,0" Click="CancelButton_Click" IsEnabled="False" />
-            <Button x:Name="ShowLogButton" Content="Log anzeigen" Padding="8,4" Margin="8,0,0,0" Click="ShowLogButton_Click" />
-            <ProgressBar x:Name="RunProgressBar" Width="160" Height="18" Margin="16,4,0,0" Minimum="0" Maximum="100" />
-            <TextBlock x:Name="CurrentFileText" Margin="8,4,0,0" VerticalAlignment="Center" />
+            <Button x:Name="AddJobButton" Content="Neuer Job" Style="{StaticResource PrimaryButtonStyle}" Padding="8,4" Click="AddJobButton_Click" />
+            <Button x:Name="OpenJobButton" Content="Öffnen" Padding="8,4" Margin="8,0,0,0" Click="OpenJobButton_Click" />
+            <Button x:Name="DeleteJobButton" Content="Löschen" Style="{StaticResource GhostButtonStyle}" Padding="8,4" Margin="8,0,0,0" Click="DeleteJobButton_Click" />
         </StackPanel>
         <DataGrid x:Name="JobsGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
                   MouseDoubleClick="JobsGrid_MouseDoubleClick">

@@ -140,6 +140,35 @@
     <!-- Unstyled <Button> in existing XAML falls back to the secondary look -->
     <Style TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}"/>
 
+    <!-- Sidebar navigation item (flat, left accent border when active) -->
+    <Style x:Key="SidebarNavStyle" TargetType="RadioButton">
+        <Setter Property="FontFamily" Value="{StaticResource HeadingFont}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+        <Setter Property="Padding" Value="16,10"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="Bd" Background="Transparent" BorderThickness="2,0,0,0" BorderBrush="Transparent" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource Accent100Brush}"/>
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Accent800Brush}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource Accent100Brush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Tags / status pills -->
     <Style x:Key="TagBaseStyle" TargetType="Border">
         <Setter Property="Padding" Value="8,2"/>
