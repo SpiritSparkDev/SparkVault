@@ -211,34 +211,45 @@
             </Grid>
 
             <!-- Einstellungen -->
-            <StackPanel x:Name="SettingsPanel" Visibility="Collapsed">
-                <TextBlock Text="Einstellungen" Style="{StaticResource HeadingTextStyle}" FontSize="22" Margin="0,0,0,16"/>
+            <ScrollViewer x:Name="SettingsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                <StackPanel MaxWidth="520" HorizontalAlignment="Left">
+                    <TextBlock x:Name="SettingsHeaderText" Text="Einstellungen" Style="{StaticResource HeadingTextStyle}" FontSize="22" Margin="0,0,0,16"/>
 
-                <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="0,14">
-                    <DockPanel>
-                        <Button Content="Bearbeiten" Style="{StaticResource SecondaryButtonStyle}" DockPanel.Dock="Right" Click="EditSettings_Click"/>
-                        <StackPanel><TextBlock Text="Name" FontWeight="SemiBold"/><TextBlock x:Name="SettingsNameText" Style="{StaticResource MutedTextStyle}"/></StackPanel>
+                    <TextBlock Text="Name" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <TextBox x:Name="SettingsNameBox" Margin="0,0,0,14"/>
+
+                    <TextBlock Text="Quellpfad" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <DockPanel Margin="0,0,0,14">
+                        <Button Content="..." Width="34" DockPanel.Dock="Right" Style="{StaticResource SecondaryButtonStyle}" Click="SettingsBrowseSource_Click"/>
+                        <TextBox x:Name="SettingsSourcePathBox" Margin="0,0,8,0"/>
                     </DockPanel>
-                </Border>
-                <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="0,14">
-                    <DockPanel>
-                        <Button Content="Bearbeiten" Style="{StaticResource SecondaryButtonStyle}" DockPanel.Dock="Right" Click="EditSettings_Click"/>
-                        <StackPanel><TextBlock Text="Quellpfad" FontWeight="SemiBold"/><TextBlock x:Name="SettingsSourceText" Style="{StaticResource MutedTextStyle}"/></StackPanel>
-                    </DockPanel>
-                </Border>
-                <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="0,14">
-                    <DockPanel>
-                        <Button Content="Bearbeiten" Style="{StaticResource SecondaryButtonStyle}" DockPanel.Dock="Right" Click="EditSettings_Click"/>
-                        <StackPanel><TextBlock Text="Ziele" FontWeight="SemiBold"/><TextBlock x:Name="SettingsTargetsText" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap"/></StackPanel>
-                    </DockPanel>
-                </Border>
-                <Border Padding="0,14">
-                    <DockPanel>
-                        <Button Content="Bearbeiten" Style="{StaticResource SecondaryButtonStyle}" DockPanel.Dock="Right" Click="EditSettings_Click"/>
-                        <StackPanel><TextBlock Text="Zeitplan" FontWeight="SemiBold"/><TextBlock x:Name="SettingsScheduleText" Style="{StaticResource MutedTextStyle}"/></StackPanel>
-                    </DockPanel>
-                </Border>
-            </StackPanel>
+
+                    <TextBlock Text="Ziele" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <ListBox x:Name="SettingsTargetsListBox" Height="80" Margin="0,0,0,6" DisplayMemberPath="Description"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                        <Button Content="Hinzufügen" Style="{StaticResource SecondaryButtonStyle}" Padding="10,3" Click="SettingsAddTarget_Click"/>
+                        <Button Content="Bearbeiten" Style="{StaticResource SecondaryButtonStyle}" Padding="10,3" Margin="8,0,0,0" Click="SettingsEditTarget_Click"/>
+                        <Button Content="Entfernen" Style="{StaticResource GhostButtonStyle}" Padding="10,3" Margin="8,0,0,0" Click="SettingsRemoveTarget_Click"/>
+                    </StackPanel>
+
+                    <TextBlock Text="Ausschlussmuster (eine Zeile pro Muster, z. B. *.tmp)" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <TextBox x:Name="SettingsExcludePatternsBox" Height="60" AcceptsReturn="True" TextWrapping="Wrap" Margin="0,0,0,14"/>
+
+                    <TextBlock Text="Zeitplan" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <ComboBox x:Name="SettingsScheduleTypeCombo" Margin="0,0,0,8" SelectionChanged="SettingsScheduleTypeCombo_SelectionChanged">
+                        <ComboBoxItem Content="Manuell"/>
+                        <ComboBoxItem Content="Intervall (Stunden)"/>
+                        <ComboBoxItem Content="Täglich um"/>
+                    </ComboBox>
+                    <TextBlock x:Name="SettingsIntervalLabel" Text="Intervall in Stunden" Margin="0,0,0,4"/>
+                    <TextBox x:Name="SettingsIntervalHoursBox" Margin="0,0,0,14"/>
+                    <TextBlock x:Name="SettingsDailyAtLabel" Text="Uhrzeit (HH:mm)" Margin="0,0,0,4"/>
+                    <TextBox x:Name="SettingsDailyAtTimeBox" Margin="0,0,0,14"/>
+
+                    <Button x:Name="SettingsSaveButton" Content="Speichern" Style="{StaticResource PrimaryButtonStyle}"
+                            HorizontalAlignment="Left" Margin="0,10,0,0" Click="SettingsSave_Click"/>
+                </StackPanel>
+            </ScrollViewer>
         </Grid>
     </DockPanel>
 </Window>

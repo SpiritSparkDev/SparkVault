@@ -9,16 +9,58 @@
             <Button x:Name="OpenJobButton" Content="Öffnen" Padding="8,4" Margin="8,0,0,0" Click="OpenJobButton_Click" />
             <Button x:Name="DeleteJobButton" Content="Löschen" Style="{StaticResource GhostButtonStyle}" Padding="8,4" Margin="8,0,0,0" Click="DeleteJobButton_Click" />
         </StackPanel>
-        <DataGrid x:Name="JobsGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
-                  MouseDoubleClick="JobsGrid_MouseDoubleClick">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="150" />
-                <DataGridTextColumn Header="Quelle" Binding="{Binding SourcePath}" Width="200" />
-                <DataGridTextColumn Header="Ziele" Binding="{Binding TargetsDisplay}" Width="220" />
-                <DataGridTextColumn Header="Letzter Lauf" Binding="{Binding LastRunDisplay}" Width="140" />
-                <DataGridTextColumn Header="Nächster Lauf" Binding="{Binding NextRunDisplay}" Width="140" />
-                <DataGridTextColumn Header="Status" Binding="{Binding LastStatusDisplay}" Width="80" />
-            </DataGrid.Columns>
-        </DataGrid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ListBox x:Name="JobsList" BorderThickness="0" Background="Transparent" SelectionMode="Single"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     MouseDoubleClick="JobsList_MouseDoubleClick">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="0,0,0,10"/>
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border x:Name="Bd" Style="{StaticResource CardStyle}" Padding="20">
+                                        <ContentPresenter/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource Accent100Brush}"/>
+                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource Accent100Brush}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="20,0,0,0">
+                                <TextBlock Text="NÄCHSTER LAUF" Style="{StaticResource MutedTextStyle}" HorizontalAlignment="Right"/>
+                                <TextBlock Text="{Binding NextRunDisplay}" Style="{StaticResource HeadingTextStyle}" FontSize="14" HorizontalAlignment="Right" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <Ellipse Width="12" Height="12" Fill="{Binding StatusBrush}" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name}" Style="{StaticResource HeadingTextStyle}" FontSize="18"/>
+                                <TextBlock Text="{Binding SourcePath}" Style="{StaticResource MutedTextStyle}" FontFamily="Consolas" FontSize="11" Margin="0,4,0,0"/>
+                                <TextBlock Text="{Binding TargetsDisplay}" Style="{StaticResource MutedTextStyle}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                    <TextBlock Text="Letzter Lauf: " Style="{StaticResource MutedTextStyle}"/>
+                                    <TextBlock Text="{Binding LastRunDisplay}" Style="{StaticResource MutedTextStyle}"/>
+                                    <TextBlock Text=" · " Style="{StaticResource MutedTextStyle}"/>
+                                    <TextBlock Text="{Binding LastStatusDisplay}" Style="{StaticResource MutedTextStyle}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </DockPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </ScrollViewer>
     </DockPanel>
 </Window>

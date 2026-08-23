@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using SparkVault.Core;
@@ -7,6 +8,12 @@ namespace SparkVault.App;
 public partial class JobDashboardWindow : Window
 {
     private sealed record HistoryRow(DateTime StartedAt, DateTime? EndedAt, string Target, RunStatus Status, int FileCount, long TotalBytes, string? ErrorMessage);
+
+    private sealed class TargetListItem
+    {
+        public required BackupTarget Target { get; init; }
+        public string Description => Target.Describe();
+    }
 
     private sealed class FolderRow
     {
@@ -25,22 +32,39 @@ public partial class JobDashboardWindow : Window
         public required long TotalBytes { get; init; }
     }
 
-    private readonly int _jobId;
+    private int? _jobId;
     private CancellationTokenSource? _runCts;
     private PauseToken? _pauseToken;
     private DateTime _speedSampleAt;
     private long _speedSampleBytes;
     private CancellationTokenSource? _restoreCts;
+    private readonly ObservableCollection<TargetListItem> _settingsTargets = new();
 
     public JobDashboardWindow(int jobId)
     {
         InitializeComponent();
         _jobId = jobId;
+        SettingsTargetsListBox.ItemsSource = _settingsTargets;
         LoadOverview();
         NavOverview.IsChecked = true;
     }
 
-    private BackupJob? CurrentJob => App.JobRepository.GetById(_jobId);
+    // Draft mode: no job exists yet. Every other tab is locked until the required fields on
+    // Einstellungen are filled in and "Job erstellen" persists the job for the first time.
+    public JobDashboardWindow()
+    {
+        InitializeComponent();
+        _jobId = null;
+        SettingsTargetsListBox.ItemsSource = _settingsTargets;
+        JobNameHeader.Text = "Neuer Job";
+        NavOverview.IsEnabled = false;
+        NavFiles.IsEnabled = false;
+        NavHistory.IsEnabled = false;
+        NavRestore.IsEnabled = false;
+        NavSettings.IsChecked = true;
+    }
+
+    private BackupJob? CurrentJob => _jobId is { } id ? App.JobRepository.GetById(id) : null;
 
     private void Nav_Checked(object sender, RoutedEventArgs e)
     {
@@ -309,25 +333,177 @@ public partial class JobDashboardWindow : Window
 
     private void LoadSettings()
     {
+        _settingsTargets.Clear();
         var job = CurrentJob;
-        if (job is null) return;
 
-        SettingsNameText.Text = job.Name;
-        SettingsSourceText.Text = job.SourcePath;
-        SettingsTargetsText.Text = job.Targets.Count == 0 ? "Keine Ziele" : string.Join(", ", job.Targets.Select(t => t.Describe()));
-        SettingsScheduleText.Text = job.ScheduleType switch
+        if (job is not null)
         {
-            ScheduleType.Interval => $"Alle {job.IntervalHours} Std.",
-            ScheduleType.DailyAt => $"Täglich um {job.DailyAtTime:HH\\:mm}",
-            _ => "Manuell",
-        };
+            SettingsHeaderText.Text = "Einstellungen";
+            SettingsSaveButton.Content = "Speichern";
+            SettingsNameBox.Text = job.Name;
+            SettingsSourcePathBox.Text = job.SourcePath;
+            SettingsExcludePatternsBox.Text = string.Join(Environment.NewLine, job.ExcludePatterns);
+            foreach (var target in job.Targets)
+                _settingsTargets.Add(new TargetListItem { Target = target });
+            SettingsScheduleTypeCombo.SelectedIndex = job.ScheduleType switch
+            {
+                ScheduleType.Interval => 1,
+                ScheduleType.DailyAt => 2,
+                _ => 0,
+            };
+            SettingsIntervalHoursBox.Text = job.IntervalHours?.ToString() ?? "";
+            SettingsDailyAtTimeBox.Text = job.DailyAtTime?.ToString("HH:mm") ?? "";
+        }
+        else
+        {
+            SettingsHeaderText.Text = "Neuer Job";
+            SettingsSaveButton.Content = "Job erstellen";
+            SettingsNameBox.Text = "";
+            SettingsSourcePathBox.Text = "";
+            SettingsExcludePatternsBox.Text = "";
+            SettingsScheduleTypeCombo.SelectedIndex = 0;
+            SettingsIntervalHoursBox.Text = "";
+            SettingsDailyAtTimeBox.Text = "";
+        }
     }
 
-    private void EditSettings_Click(object sender, RoutedEventArgs e)
+    private void SettingsBrowseSource_Click(object sender, RoutedEventArgs e)
     {
-        var editor = new JobEditorWindow(jobId: _jobId) { Owner = this };
-        if (editor.ShowDialog() == true)
+        using var dialog = new System.Windows.Forms.FolderBrowserDialog();
+        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            SettingsSourcePathBox.Text = dialog.SelectedPath;
+    }
+
+    private void SettingsAddTarget_Click(object sender, RoutedEventArgs e)
+    {
+        var editor = new TargetEditorWindow(existing: null) { Owner = this };
+        if (editor.ShowDialog() == true && editor.Result is not null)
+            _settingsTargets.Add(new TargetListItem { Target = editor.Result });
+    }
+
+    private void SettingsEditTarget_Click(object sender, RoutedEventArgs e)
+    {
+        if (SettingsTargetsListBox.SelectedItem is not TargetListItem selected) return;
+
+        var editor = new TargetEditorWindow(existing: selected.Target) { Owner = this };
+        if (editor.ShowDialog() == true && editor.Result is not null)
         {
+            var index = _settingsTargets.IndexOf(selected);
+            _settingsTargets[index] = new TargetListItem { Target = editor.Result };
+        }
+    }
+
+    private void SettingsRemoveTarget_Click(object sender, RoutedEventArgs e)
+    {
+        if (SettingsTargetsListBox.SelectedItem is TargetListItem selected)
+            _settingsTargets.Remove(selected);
+    }
+
+    private void SettingsScheduleTypeCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        var isInterval = SettingsScheduleTypeCombo.SelectedIndex == 1;
+        var isDailyAt = SettingsScheduleTypeCombo.SelectedIndex == 2;
+        SettingsIntervalLabel.Visibility = isInterval ? Visibility.Visible : Visibility.Collapsed;
+        SettingsIntervalHoursBox.Visibility = isInterval ? Visibility.Visible : Visibility.Collapsed;
+        SettingsDailyAtLabel.Visibility = isDailyAt ? Visibility.Visible : Visibility.Collapsed;
+        SettingsDailyAtTimeBox.Visibility = isDailyAt ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void SettingsSave_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(SettingsNameBox.Text) || string.IsNullOrWhiteSpace(SettingsSourcePathBox.Text))
+        {
+            System.Windows.MessageBox.Show(this, "Name und Quellpfad sind Pflichtfelder.", "SparkVault",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            return;
+        }
+
+        if (_settingsTargets.Count == 0)
+        {
+            System.Windows.MessageBox.Show(this, "Bitte mindestens ein Ziel hinzufügen.", "SparkVault",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            return;
+        }
+
+        // A local target inside the source makes every run re-scan its own output.
+        var fullSource = Path.GetFullPath(SettingsSourcePathBox.Text.Trim());
+        var sourcePrefix = fullSource.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        foreach (var item in _settingsTargets)
+        {
+            if (item.Target.Type != TargetType.Local || item.Target.DestinationPath is null)
+                continue;
+
+            var fullDest = Path.GetFullPath(item.Target.DestinationPath);
+            if (fullDest.Equals(fullSource, StringComparison.OrdinalIgnoreCase) ||
+                fullDest.StartsWith(sourcePrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                System.Windows.MessageBox.Show(this, "Ein lokales Ziel darf nicht innerhalb des Quellpfads liegen.", "SparkVault",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+        }
+
+        var scheduleType = SettingsScheduleTypeCombo.SelectedIndex switch
+        {
+            1 => ScheduleType.Interval,
+            2 => ScheduleType.DailyAt,
+            _ => ScheduleType.None,
+        };
+
+        int? intervalHours = null;
+        if (scheduleType == ScheduleType.Interval)
+        {
+            if (!int.TryParse(SettingsIntervalHoursBox.Text, out var hours) || hours <= 0)
+            {
+                System.Windows.MessageBox.Show(this, "Bitte eine gültige Stundenzahl angeben.", "SparkVault",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+            intervalHours = hours;
+        }
+
+        TimeOnly? dailyAtTime = null;
+        if (scheduleType == ScheduleType.DailyAt)
+        {
+            if (!TimeOnly.TryParse(SettingsDailyAtTimeBox.Text, out var time))
+            {
+                System.Windows.MessageBox.Show(this, "Bitte eine gültige Uhrzeit im Format HH:mm angeben.", "SparkVault",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+            dailyAtTime = time;
+        }
+
+        var job = new BackupJob
+        {
+            Id = _jobId ?? 0,
+            Name = SettingsNameBox.Text.Trim(),
+            SourcePath = SettingsSourcePathBox.Text.Trim(),
+            ExcludePatterns = SettingsExcludePatternsBox.Text
+                .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList(),
+            ScheduleType = scheduleType,
+            IntervalHours = intervalHours,
+            DailyAtTime = dailyAtTime,
+            Targets = _settingsTargets.Select(t => t.Target).ToList(),
+        };
+
+        var wasDraft = _jobId is null;
+        if (wasDraft)
+        {
+            App.JobRepository.Add(job);
+            _jobId = job.Id;
+
+            NavOverview.IsEnabled = true;
+            NavFiles.IsEnabled = true;
+            NavHistory.IsEnabled = true;
+            NavRestore.IsEnabled = true;
+            LoadOverview();
+            NavOverview.IsChecked = true;
+        }
+        else
+        {
+            App.JobRepository.Update(job);
             LoadOverview();
             LoadSettings();
         }

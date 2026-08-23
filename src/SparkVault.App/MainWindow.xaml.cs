@@ -15,6 +15,7 @@ public sealed class JobRow
     public string LastRunDisplay { get; init; } = "-";
     public string NextRunDisplay { get; init; } = "-";
     public string LastStatusDisplay { get; init; } = "-";
+    public System.Windows.Media.Brush StatusBrush { get; init; } = System.Windows.Media.Brushes.Gray;
 }
 
 public partial class MainWindow : Window
@@ -24,7 +25,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        JobsGrid.ItemsSource = _jobs;
+        JobsList.ItemsSource = _jobs;
         ReloadJobs();
     }
 
@@ -49,6 +50,12 @@ public partial class MainWindow : Window
                 LastRunDisplay = lastRunStartedAt?.ToLocalTime().ToString("g") ?? "-",
                 NextRunDisplay = DescribeNextRun(job, lastRunStartedAt),
                 LastStatusDisplay = lastStatus?.ToString() ?? "-",
+                StatusBrush = lastStatus switch
+                {
+                    RunStatus.Success => (System.Windows.Media.Brush)FindResource("AccentBrush"),
+                    RunStatus.Failed => (System.Windows.Media.Brush)FindResource("Accent600Brush"),
+                    _ => (System.Windows.Media.Brush)FindResource("Accent300Brush"),
+                },
             });
         }
     }
@@ -71,19 +78,21 @@ public partial class MainWindow : Window
         }
     }
 
-    private JobRow? SelectedJob => JobsGrid.SelectedItem as JobRow;
+    private JobRow? SelectedJob => JobsList.SelectedItem as JobRow;
 
     private void AddJobButton_Click(object sender, RoutedEventArgs e)
     {
-        var editor = new JobEditorWindow(jobId: null) { Owner = this };
-        if (editor.ShowDialog() == true)
-            ReloadJobs();
+        var dashboard = new JobDashboardWindow();
+        dashboard.Closed += (_, _) => ReloadJobs();
+        dashboard.Show();
     }
 
     private void OpenJobButton_Click(object sender, RoutedEventArgs e)
     {
         if (SelectedJob is null) return;
-        new JobDashboardWindow(SelectedJob.Id).Show();
+        var dashboard = new JobDashboardWindow(SelectedJob.Id);
+        dashboard.Closed += (_, _) => ReloadJobs();
+        dashboard.Show();
     }
 
     private void DeleteJobButton_Click(object sender, RoutedEventArgs e)
@@ -98,7 +107,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void JobsGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private void JobsList_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         OpenJobButton_Click(sender, e);
     }
