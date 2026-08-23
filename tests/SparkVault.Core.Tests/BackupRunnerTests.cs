@@ -35,7 +35,8 @@ public class BackupRunnerTests
 
             var runRepo = new RunRepository(connectionString);
             var runFileRepo = new RunFileRepository(connectionString);
-            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
 
             var results = await runner.RunAsync(job, progress: null, CancellationToken.None);
 
@@ -81,7 +82,8 @@ public class BackupRunnerTests
 
             var runRepo = new RunRepository(connectionString);
             var runFileRepo = new RunFileRepository(connectionString);
-            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
 
             var results = await runner.RunAsync(job, progress: null, CancellationToken.None);
 
@@ -130,7 +132,8 @@ public class BackupRunnerTests
 
             var runRepo = new RunRepository(connectionString);
             var runFileRepo = new RunFileRepository(connectionString);
-            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
 
             var results = await runner.RunAsync(job, progress: null, CancellationToken.None);
 
@@ -166,7 +169,8 @@ public class BackupRunnerTests
 
             var runRepo = new RunRepository(connectionString);
             var runFileRepo = new RunFileRepository(connectionString);
-            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
 
             var results = await runner.RunAsync(job, progress: null, CancellationToken.None);
 
@@ -208,7 +212,8 @@ public class BackupRunnerTests
 
             var runRepo = new RunRepository(connectionString);
             var runFileRepo = new RunFileRepository(connectionString);
-            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
 
             var startedCount = 0;
             var completedStatuses = new List<RunStatus>();
@@ -270,7 +275,8 @@ public class BackupRunnerTests
 
             var runRepo = new RunRepository(connectionString);
             var runFileRepo = new RunFileRepository(connectionString);
-            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
 
             using var cts = new CancellationTokenSource();
 
@@ -334,7 +340,8 @@ public class BackupRunnerTests
 
             var runRepo = new RunRepository(connectionString);
             var runFileRepo = new RunFileRepository(connectionString);
-            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
 
             var results = await runner.RunAsync(job, progress: null, CancellationToken.None);
 
@@ -385,7 +392,8 @@ public class BackupRunnerTests
 
             var runRepo = new RunRepository(connectionString);
             var runFileRepo = new RunFileRepository(connectionString);
-            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
 
             var results = await runner.RunAsync(job, progress: null, CancellationToken.None);
 
@@ -424,7 +432,8 @@ public class BackupRunnerTests
 
             var runRepo = new RunRepository(connectionString);
             var runFileRepo = new RunFileRepository(connectionString);
-            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
 
             // Paused before the run starts (not from a Progress<T> callback — Progress.Report
             // marshals to the captured context asynchronously, so a Pause() called from inside
@@ -475,7 +484,8 @@ public class BackupRunnerTests
 
             var runRepo = new RunRepository(connectionString);
             var runFileRepo = new RunFileRepository(connectionString);
-            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
 
             var results = await runner.RunAsync(job, progress: null, CancellationToken.None);
 
@@ -515,7 +525,8 @@ public class BackupRunnerTests
 
             var runRepo = new RunRepository(connectionString);
             var runFileRepo = new RunFileRepository(connectionString);
-            var runner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
 
             var results = await runner.RunAsync(job, progress: null, CancellationToken.None);
 
@@ -525,6 +536,139 @@ public class BackupRunnerTests
         finally
         {
             srcDir.Delete(recursive: true);
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_SecondRunWithNoChanges_TransfersNothingButKeepsFullManifest()
+    {
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-src-");
+        var destDir = Directory.CreateTempSubdirectory("sparkvault-dest-");
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            File.WriteAllText(Path.Combine(srcDir.FullName, "a.txt"), "hello");
+            File.WriteAllText(Path.Combine(srcDir.FullName, "b.txt"), "world!");
+
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var jobRepo = new JobRepository(connectionString);
+            var jobId = jobRepo.Add(new BackupJob
+            {
+                Name = "Test",
+                SourcePath = srcDir.FullName,
+                Targets = new List<BackupTarget> { new() { Type = TargetType.Local, DestinationPath = destDir.FullName } },
+            });
+            var job = jobRepo.GetById(jobId)!;
+
+            var runRepo = new RunRepository(connectionString);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
+
+            var firstResults = await runner.RunAsync(job, progress: null, CancellationToken.None);
+            var secondResults = await runner.RunAsync(job, progress: null, CancellationToken.None);
+
+            Assert.Equal(0, secondResults[0].FileCount);
+            Assert.Equal(0, secondResults[0].TotalBytes);
+            var manifest = runFileRepo.GetByRunId(secondResults[0].Id);
+            Assert.Equal(2, manifest.Count);
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
+            destDir.Delete(recursive: true);
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_ChangedFile_IsReUploaded()
+    {
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-src-");
+        var destDir = Directory.CreateTempSubdirectory("sparkvault-dest-");
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            var filePath = Path.Combine(srcDir.FullName, "a.txt");
+            File.WriteAllText(filePath, "hello");
+
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var jobRepo = new JobRepository(connectionString);
+            var jobId = jobRepo.Add(new BackupJob
+            {
+                Name = "Test",
+                SourcePath = srcDir.FullName,
+                Targets = new List<BackupTarget> { new() { Type = TargetType.Local, DestinationPath = destDir.FullName } },
+            });
+            var job = jobRepo.GetById(jobId)!;
+
+            var runRepo = new RunRepository(connectionString);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
+
+            await runner.RunAsync(job, progress: null, CancellationToken.None);
+
+            // Ensure a strictly later, distinguishable LastWriteTimeUtc than the first write.
+            await Task.Delay(50);
+            File.WriteAllText(filePath, "hello there, much longer content now");
+
+            var secondResults = await runner.RunAsync(job, progress: null, CancellationToken.None);
+
+            Assert.Equal(1, secondResults[0].FileCount);
+            Assert.Equal("hello there, much longer content now".Length, secondResults[0].TotalBytes);
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
+            destDir.Delete(recursive: true);
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_DeletedSourceFile_IsQuarantinedAndDroppedFromNewManifest()
+    {
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-src-");
+        var destDir = Directory.CreateTempSubdirectory("sparkvault-dest-");
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            var filePath = Path.Combine(srcDir.FullName, "a.txt");
+            File.WriteAllText(filePath, "hello");
+
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var jobRepo = new JobRepository(connectionString);
+            var jobId = jobRepo.Add(new BackupJob
+            {
+                Name = "Test",
+                SourcePath = srcDir.FullName,
+                Targets = new List<BackupTarget> { new() { Type = TargetType.Local, DestinationPath = destDir.FullName } },
+            });
+            var job = jobRepo.GetById(jobId)!;
+
+            var runRepo = new RunRepository(connectionString);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
+
+            await runner.RunAsync(job, progress: null, CancellationToken.None);
+            File.Delete(filePath);
+
+            var secondResults = await runner.RunAsync(job, progress: null, CancellationToken.None);
+
+            Assert.Empty(runFileRepo.GetByRunId(secondResults[0].Id));
+            Assert.False(File.Exists(Path.Combine(destDir.FullName, "Test", "a.txt")));
+            Assert.True(Directory.Exists(Path.Combine(destDir.FullName, "_deleted")));
+            var quarantinePath = quarantineRepo.GetLatestQuarantinePath(jobId, job.Targets[0].Id, "Test\\a.txt");
+            Assert.NotNull(quarantinePath);
+            Assert.True(File.Exists(Path.Combine(destDir.FullName, quarantinePath!)));
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
+            destDir.Delete(recursive: true);
             if (File.Exists(dbPath)) File.Delete(dbPath);
         }
     }

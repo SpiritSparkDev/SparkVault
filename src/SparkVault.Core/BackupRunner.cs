@@ -6,6 +6,7 @@ public sealed class BackupRunner
 {
     private readonly RunRepository _runRepository;
     private readonly RunFileRepository _runFileRepository;
+    private readonly QuarantineRepository _quarantineRepository;
     private readonly ILogger _logger;
 
     // ponytail: single global lock serializes all jobs, not just the same job — fine for
@@ -18,10 +19,11 @@ public sealed class BackupRunner
     public event Action<BackupJob>? RunStarted;
     public event Action<BackupJob, RunStatus>? RunCompleted;
 
-    public BackupRunner(RunRepository runRepository, RunFileRepository runFileRepository, ILogger logger)
+    public BackupRunner(RunRepository runRepository, RunFileRepository runFileRepository, QuarantineRepository quarantineRepository, ILogger logger)
     {
         _runRepository = runRepository;
         _runFileRepository = runFileRepository;
+        _quarantineRepository = quarantineRepository;
         _logger = logger;
     }
 
@@ -109,24 +111,54 @@ public sealed class BackupRunner
             if (!await target.TestConnectionAsync(ct))
                 throw new IOException($"Ziel nicht erreichbar: {targetConfig.Describe()}");
 
-            long totalBytes = files.Sum(f => f.Size);
+            var previousManifest = GetPreviousManifest(job.Id, targetConfig.Id);
 
-            foreach (var file in files)
+            if (job.VerifyTargetBeforeRun)
+            {
+                var remotePaths = (await target.ListExistingAsync(ct)).Select(f => f.Path).ToHashSet(StringComparer.Ordinal);
+                previousManifest = previousManifest.Where(m => remotePaths.Contains(m.RelativePath)).ToList();
+            }
+
+            var plan = IncrementalPlanner.Compute(files, previousManifest);
+            long totalBytes = plan.ToUpload.Sum(f => f.Size);
+
+            foreach (var file in plan.Unchanged)
+                uploaded.Add(new RunFileRecord(file.RelativePath, file.Size, file.LastWriteTimeUtc));
+
+            foreach (var file in plan.ToUpload)
             {
                 ct.ThrowIfCancellationRequested();
                 if (pauseToken is not null) await pauseToken.WaitIfPausedAsync(ct);
-                progress?.Report(new TransferProgress(done, files.Count, bytesDone, totalBytes, file.RelativePath, targetConfig.Describe()));
+                progress?.Report(new TransferProgress(done, plan.ToUpload.Count, bytesDone, totalBytes, file.RelativePath, targetConfig.Describe()));
                 await target.UploadAsync(file, progress, ct);
                 done++;
                 bytesDone += file.Size;
                 uploaded.Add(new RunFileRecord(file.RelativePath, file.Size, file.LastWriteTimeUtc));
-                progress?.Report(new TransferProgress(done, files.Count, bytesDone, totalBytes, file.RelativePath, targetConfig.Describe()));
+                progress?.Report(new TransferProgress(done, plan.ToUpload.Count, bytesDone, totalBytes, file.RelativePath, targetConfig.Describe()));
+            }
+
+            var quarantinedCount = 0;
+            foreach (var entry in plan.ToQuarantine)
+            {
+                var quarantinePath = $"_deleted\\{run.StartedAt:yyyyMMdd-HHmmss}\\{entry.RelativePath}";
+                try
+                {
+                    await target.MoveAsync(entry.RelativePath, quarantinePath, ct);
+                    _quarantineRepository.Add(job.Id, targetConfig.Id, entry.RelativePath, quarantinePath, run.Id, DateTime.UtcNow);
+                    quarantinedCount++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.Warning(ex, "Quarantäne fehlgeschlagen für {Path} ({JobName} -> {Target})",
+                        entry.RelativePath, job.Name, targetConfig.Describe());
+                }
             }
 
             _runFileRepository.AddRange(run.Id, uploaded);
             run.Status = RunStatus.Success;
-            _logger.Information("Job {JobName} -> {Target} completed: {FileCount} files, {TotalBytes} bytes",
-                job.Name, targetConfig.Describe(), done, bytesDone);
+            _logger.Information(
+                "Job {JobName} -> {Target} completed: {NewOrChanged} neu/geändert, {Unchanged} unverändert übersprungen, {Quarantined} in Quarantäne, {TotalBytes} Bytes übertragen",
+                job.Name, targetConfig.Describe(), plan.ToUpload.Count, plan.Unchanged.Count, quarantinedCount, bytesDone);
         }
         catch (OperationCanceledException)
         {
@@ -182,5 +214,14 @@ public sealed class BackupRunner
         run.Id = _runRepository.Add(run);
         _logger.Warning("Job {JobName} -> {Target} was cancelled before it started", job.Name, targetConfig.Describe());
         return run;
+    }
+
+    private IReadOnlyList<ManifestEntry> GetPreviousManifest(int jobId, int targetId)
+    {
+        var lastSuccessful = _runRepository.GetLatestSuccessfulRun(jobId, targetId);
+        if (lastSuccessful is null) return Array.Empty<ManifestEntry>();
+        return _runFileRepository.GetByRunId(lastSuccessful.Id)
+            .Select(f => new ManifestEntry(f.RelativePath, f.Size, f.SourceModifiedUtc))
+            .ToList();
     }
 }

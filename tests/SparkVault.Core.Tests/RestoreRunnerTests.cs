@@ -36,7 +36,8 @@ public class RestoreRunnerTests
 
             var runRepo = new RunRepository(connectionString);
             var runFileRepo = new RunFileRepository(connectionString);
-            var backupRunner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var backupRunner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
             var results = await backupRunner.RunAsync(job, progress: null, CancellationToken.None);
             var runId = results[0].Id;
 
@@ -81,7 +82,8 @@ public class RestoreRunnerTests
 
             var runRepo = new RunRepository(connectionString);
             var runFileRepo = new RunFileRepository(connectionString);
-            var backupRunner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var backupRunner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
             var results = await backupRunner.RunAsync(job, progress: null, CancellationToken.None);
             var runId = results[0].Id;
 
@@ -145,7 +147,8 @@ public class RestoreRunnerTests
 
             var runRepo = new RunRepository(connectionString);
             var runFileRepo = new RunFileRepository(connectionString);
-            var backupRunner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var backupRunner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
             var results = await backupRunner.RunAsync(job, progress: null, CancellationToken.None);
             var runId = results[0].Id;
 
@@ -204,7 +207,8 @@ public class RestoreRunnerTests
 
             var runRepo = new RunRepository(connectionString);
             var runFileRepo = new RunFileRepository(connectionString);
-            var backupRunner = new BackupRunner(runRepo, runFileRepo, Log.Logger);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var backupRunner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
             var results = await backupRunner.RunAsync(job, progress: null, CancellationToken.None);
             var runId = results[0].Id;
 
