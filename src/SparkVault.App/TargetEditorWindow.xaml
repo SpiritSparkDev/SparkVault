@@ -76,12 +76,12 @@
             <TextBox x:Name="S3PrefixBox" Margin="0,0,0,8" />
         </StackPanel>
 
-        <Button x:Name="TestConnectionButton" Content="Verbindung testen" Padding="8,4"
+        <Button x:Name="TestConnectionButton" Content="Verbindung testen" Style="{StaticResource SecondaryButtonStyle}" Padding="8,4"
                 HorizontalAlignment="Left" Margin="0,4,0,8" Click="TestConnection_Click" />
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-            <Button Content="Abbrechen" Padding="12,4" Click="Cancel_Click" />
-            <Button Content="Speichern" Padding="12,4" Margin="8,0,0,0" Click="Save_Click" />
+            <Button Content="Abbrechen" Style="{StaticResource GhostButtonStyle}" Padding="12,4" Click="Cancel_Click" />
+            <Button Content="Speichern" Style="{StaticResource PrimaryButtonStyle}" Padding="12,4" Margin="8,0,0,0" Click="Save_Click" />
         </StackPanel>
     </StackPanel>
 </Window>

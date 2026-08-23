@@ -9,10 +9,17 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationTitle>SparkVault</ApplicationTitle>
     <AssemblyName>SparkVault</AssemblyName>
+    <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\Fonts\*.ttf" />
+    <Resource Include="Assets\icon.ico" />
+    <Resource Include="Assets\logo-light.png" />
   </ItemGroup>
 
   <ItemGroup>
