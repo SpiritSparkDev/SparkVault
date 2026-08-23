@@ -135,6 +135,7 @@ public partial class App : Application
         {
             _trayIcon.Icon = System.Drawing.SystemIcons.Warning;
             _trayIcon.Text = Truncate($"SparkVault - Fehler bei \"{jobName}\"");
+            _trayIcon.ShowBalloonTip(5000, "SparkVault", $"Sicherung von \"{jobName}\" fehlgeschlagen.", ToolTipIcon.Warning);
         }
         else
         {
