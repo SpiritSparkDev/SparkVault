@@ -9,6 +9,7 @@ namespace SparkVault.App;
 
 public partial class App : Application
 {
+    public static string ConnectionString { get; private set; } = null!;
     public static JobRepository JobRepository { get; private set; } = null!;
     public static RunRepository RunRepository { get; private set; } = null!;
     public static RunFileRepository RunFileRepository { get; private set; } = null!;
@@ -41,6 +42,7 @@ public partial class App : Application
         var connectionString = $"Data Source={Path.Combine(appDataDir, "sparkvault.db")}";
         SparkVaultDatabase.EnsureCreated(connectionString);
 
+        ConnectionString = connectionString;
         JobRepository = new JobRepository(connectionString);
         RunRepository = new RunRepository(connectionString);
         RunFileRepository = new RunFileRepository(connectionString);

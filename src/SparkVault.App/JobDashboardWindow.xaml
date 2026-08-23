@@ -15,6 +15,8 @@
                                  Style="{StaticResource SidebarNavStyle}" Checked="Nav_Checked"/>
                     <RadioButton x:Name="NavHistory" Content="Verlauf" GroupName="Nav"
                                  Style="{StaticResource SidebarNavStyle}" Checked="Nav_Checked"/>
+                    <RadioButton x:Name="NavRestore" Content="Wiederherstellung" GroupName="Nav"
+                                 Style="{StaticResource SidebarNavStyle}" Checked="Nav_Checked"/>
                     <RadioButton x:Name="NavSettings" Content="Einstellungen" GroupName="Nav"
                                  Style="{StaticResource SidebarNavStyle}" Checked="Nav_Checked"/>
                 </StackPanel>
@@ -160,6 +162,53 @@
                     <DataGridTextColumn Header="Fehler" Binding="{Binding ErrorMessage}" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>
+
+            <!-- Wiederherstellung -->
+            <Grid x:Name="RestorePanel" Visibility="Collapsed">
+                <StackPanel x:Name="RestoreEmptyState">
+                    <TextBlock Text="Wiederherstellung" Style="{StaticResource HeadingTextStyle}" FontSize="22" Margin="0,0,0,16"/>
+                    <TextBlock Text="Noch keine Sicherung zum Wiederherstellen vorhanden." Style="{StaticResource MutedTextStyle}"/>
+                </StackPanel>
+
+                <StackPanel x:Name="RestoreContent" Visibility="Collapsed">
+                    <DockPanel Margin="0,0,0,16">
+                        <TextBlock Text="Wiederherstellung" Style="{StaticResource HeadingTextStyle}" FontSize="22"/>
+                        <ComboBox x:Name="RestoreTargetCombo" DockPanel.Dock="Right" Width="200" HorizontalAlignment="Right"
+                                  SelectionChanged="RestoreTargetCombo_SelectionChanged" Visibility="Collapsed"/>
+                    </DockPanel>
+                    <DockPanel LastChildFill="True">
+                        <ListBox x:Name="RestoreVersionsListBox" DockPanel.Dock="Left" Width="220" BorderThickness="0" Margin="0,0,20,0"
+                                 SelectionChanged="RestoreVersionsListBox_SelectionChanged" DisplayMemberPath="Label"/>
+                        <Border Style="{StaticResource CardStyle}" VerticalAlignment="Top">
+                            <StackPanel>
+                                <TextBlock Text="AUSGEWÄHLTER STAND" Style="{StaticResource MutedTextStyle}"/>
+                                <TextBlock x:Name="RestoreSelectedLabelText" Style="{StaticResource HeadingTextStyle}" FontSize="18" Margin="0,4,0,10"/>
+                                <TextBlock x:Name="RestoreSelectedMetaText" Style="{StaticResource MutedTextStyle}" Margin="0,0,0,14"/>
+                                <TextBlock Text="Dateien werden an ihren ursprünglichen Ort zurückgespielt." Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,0,0,14"/>
+                                <Button x:Name="RestoreButton" Content="Wiederherstellen" Style="{StaticResource PrimaryButtonStyle}"
+                                        HorizontalAlignment="Left" Click="RestoreButton_Click"/>
+                            </StackPanel>
+                        </Border>
+                    </DockPanel>
+                </StackPanel>
+
+                <StackPanel x:Name="RestoreRunningView" Visibility="Collapsed">
+                    <TextBlock Text="Wiederherstellung läuft" Style="{StaticResource HeadingTextStyle}" FontSize="22" Margin="0,0,0,16"/>
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,14">
+                                <Button x:Name="RestoreCancelButton" Content="Abbrechen" Style="{StaticResource GhostButtonStyle}"
+                                        DockPanel.Dock="Right" Click="RestoreCancelButton_Click"/>
+                                <TextBlock x:Name="RestorePercentText" Text="0" Style="{StaticResource HeadingTextStyle}" FontSize="38" Foreground="{StaticResource Accent700Brush}"/>
+                                <TextBlock Text="%" Style="{StaticResource HeadingTextStyle}" FontSize="22" Foreground="{StaticResource Accent700Brush}" Margin="4,0,0,3" VerticalAlignment="Bottom"/>
+                            </DockPanel>
+                            <ProgressBar x:Name="RestoreProgressBar" Height="6" Minimum="0" Maximum="100" Margin="0,0,0,10"/>
+                            <TextBlock x:Name="RestoreCurrentFileText" Style="{StaticResource MutedTextStyle}"
+                                       FontFamily="Consolas" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
 
             <!-- Einstellungen -->
             <StackPanel x:Name="SettingsPanel" Visibility="Collapsed">

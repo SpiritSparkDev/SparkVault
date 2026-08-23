@@ -17,11 +17,20 @@ public partial class JobDashboardWindow : Window
         public string SizeDisplay => FormatBytes(Size);
     }
 
+    private sealed class VersionRow
+    {
+        public required int RunId { get; init; }
+        public required string Label { get; init; }
+        public required int FileCount { get; init; }
+        public required long TotalBytes { get; init; }
+    }
+
     private readonly int _jobId;
     private CancellationTokenSource? _runCts;
     private PauseToken? _pauseToken;
     private DateTime _speedSampleAt;
     private long _speedSampleBytes;
+    private CancellationTokenSource? _restoreCts;
 
     public JobDashboardWindow(int jobId)
     {
@@ -38,10 +47,12 @@ public partial class JobDashboardWindow : Window
         OverviewPanel.Visibility = NavOverview.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         FilesPanel.Visibility = NavFiles.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         HistoryGrid.Visibility = NavHistory.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        RestorePanel.Visibility = NavRestore.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         SettingsPanel.Visibility = NavSettings.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
 
         if (NavFiles.IsChecked == true) LoadFiles();
         if (NavHistory.IsChecked == true) LoadHistory();
+        if (NavRestore.IsChecked == true) LoadRestore();
         if (NavSettings.IsChecked == true) LoadSettings();
     }
 
@@ -165,6 +176,135 @@ public partial class JobDashboardWindow : Window
                 targetsById.TryGetValue(r.TargetId, out var desc) ? desc : $"Ziel #{r.TargetId}",
                 r.Status, r.FileCount, r.TotalBytes, r.ErrorMessage))
             .ToList();
+    }
+
+    private void LoadRestore()
+    {
+        var job = CurrentJob;
+        if (job is null) return;
+
+        RestoreTargetCombo.Items.Clear();
+        foreach (var t in job.Targets)
+            RestoreTargetCombo.Items.Add(new System.Windows.Controls.ComboBoxItem { Content = t.Describe(), Tag = t });
+        RestoreTargetCombo.Visibility = job.Targets.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        if (RestoreTargetCombo.Items.Count > 0)
+            RestoreTargetCombo.SelectedIndex = 0;
+
+        LoadRestoreVersionsForSelectedTarget();
+    }
+
+    private BackupTarget? SelectedRestoreTarget()
+    {
+        var job = CurrentJob;
+        if (job is null || job.Targets.Count == 0) return null;
+        if (RestoreTargetCombo.SelectedItem is System.Windows.Controls.ComboBoxItem { Tag: BackupTarget t }) return t;
+        return job.Targets[0];
+    }
+
+    private void LoadRestoreVersionsForSelectedTarget()
+    {
+        var job = CurrentJob;
+        var selectedTarget = SelectedRestoreTarget();
+        if (job is null || selectedTarget is null)
+        {
+            RestoreEmptyState.Visibility = Visibility.Visible;
+            RestoreContent.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var versions = App.RunRepository.GetByJobId(job.Id)
+            .Where(r => r.TargetId == selectedTarget.Id && r.Status == RunStatus.Success)
+            .OrderByDescending(r => r.StartedAt)
+            .Select(r => new VersionRow
+            {
+                RunId = r.Id,
+                Label = r.StartedAt.ToLocalTime().ToString("g"),
+                FileCount = r.FileCount,
+                TotalBytes = r.TotalBytes,
+            })
+            .ToList();
+
+        if (versions.Count == 0)
+        {
+            RestoreEmptyState.Visibility = Visibility.Visible;
+            RestoreContent.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        RestoreEmptyState.Visibility = Visibility.Collapsed;
+        RestoreContent.Visibility = Visibility.Visible;
+        RestoreVersionsListBox.ItemsSource = versions;
+        RestoreVersionsListBox.SelectedIndex = 0;
+    }
+
+    private void RestoreTargetCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        LoadRestoreVersionsForSelectedTarget();
+    }
+
+    private void RestoreVersionsListBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (RestoreVersionsListBox.SelectedItem is not VersionRow row) return;
+        RestoreSelectedLabelText.Text = row.Label;
+        RestoreSelectedMetaText.Text = $"{FormatBytes(row.TotalBytes)} · {row.FileCount} Dateien";
+    }
+
+    private async void RestoreButton_Click(object sender, RoutedEventArgs e)
+    {
+        var job = CurrentJob;
+        var target = SelectedRestoreTarget();
+        if (job is null || target is null) return;
+        if (RestoreVersionsListBox.SelectedItem is not VersionRow row) return;
+
+        var result = System.Windows.MessageBox.Show(this,
+            $"Dateien vom Stand \"{row.Label}\" werden nach \"{job.SourcePath}\" zurückgespielt und überschreiben dortige Dateien. Fortfahren?",
+            "SparkVault", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+        if (result != System.Windows.MessageBoxResult.Yes) return;
+
+        RestoreContent.Visibility = Visibility.Collapsed;
+        RestoreRunningView.Visibility = Visibility.Visible;
+        RestorePercentText.Text = "0";
+        RestoreProgressBar.Value = 0;
+        RestoreCurrentFileText.Text = "";
+
+        _restoreCts = new CancellationTokenSource();
+        var progress = new Progress<TransferProgress>(p =>
+        {
+            RestoreProgressBar.Value = p.BytesTotal == 0 ? 0 : (double)p.BytesDone / p.BytesTotal * 100;
+            RestorePercentText.Text = ((int)RestoreProgressBar.Value).ToString();
+            RestoreCurrentFileText.Text = p.CurrentFile;
+        });
+
+        var runFileRepo = new RunFileRepository(App.ConnectionString);
+        var restoreRunner = new RestoreRunner(runFileRepo, Serilog.Log.Logger);
+
+        try
+        {
+            await restoreRunner.RestoreAsync(job, target, row.RunId, progress, _restoreCts.Token);
+            System.Windows.MessageBox.Show(this, "Wiederherstellung abgeschlossen.", "SparkVault",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        }
+        catch (OperationCanceledException)
+        {
+            // user-initiated cancel, no error dialog
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(this, $"Wiederherstellung fehlgeschlagen: {ex.Message}", "SparkVault",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
+        finally
+        {
+            RestoreRunningView.Visibility = Visibility.Collapsed;
+            RestoreContent.Visibility = Visibility.Visible;
+            _restoreCts.Dispose();
+            _restoreCts = null;
+        }
+    }
+
+    private void RestoreCancelButton_Click(object sender, RoutedEventArgs e)
+    {
+        _restoreCts?.Cancel();
     }
 
     private void LoadSettings()
