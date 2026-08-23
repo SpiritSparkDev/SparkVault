@@ -31,7 +31,7 @@ public class SftpTargetTests
         {
             var filePath = Path.Combine(srcDir.FullName, "a.txt");
             await File.WriteAllTextAsync(filePath, "hello sftp");
-            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length);
+            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
 
             await using var target = new SftpTarget(NewTestConfig());
 
@@ -61,7 +61,7 @@ public class SftpTargetTests
         {
             var filePath = Path.Combine(srcDir.FullName, "b.txt");
             await File.WriteAllTextAsync(filePath, "nested");
-            var file = new BackupFile(filePath, "sub\\b.txt", new FileInfo(filePath).Length);
+            var file = new BackupFile(filePath, "sub\\b.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
 
             await using var target = new SftpTarget(NewTestConfig());
             await target.UploadAsync(file, progress: null, CancellationToken.None);
@@ -85,7 +85,7 @@ public class SftpTargetTests
         {
             var filePath = Path.Combine(srcDir.FullName, "c.txt");
             await File.WriteAllTextAsync(filePath, "cancel me");
-            var file = new BackupFile(filePath, "c.txt", new FileInfo(filePath).Length);
+            var file = new BackupFile(filePath, "c.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
 
             await using var target = new SftpTarget(NewTestConfig());
             using var cts = new CancellationTokenSource();
@@ -117,11 +117,11 @@ public class SftpTargetTests
             await using var target = new SftpTarget(NewTestConfig());
 
             await File.WriteAllTextAsync(filePath, "old");
-            await target.UploadAsync(new BackupFile(filePath, "d.txt", new FileInfo(filePath).Length),
+            await target.UploadAsync(new BackupFile(filePath, "d.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc),
                 progress: null, CancellationToken.None);
 
             await File.WriteAllTextAsync(filePath, "new content");
-            await target.UploadAsync(new BackupFile(filePath, "d.txt", new FileInfo(filePath).Length),
+            await target.UploadAsync(new BackupFile(filePath, "d.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc),
                 progress: null, CancellationToken.None);
 
             var listed = (await target.ListExistingAsync(CancellationToken.None)).ToList();
@@ -146,7 +146,7 @@ public class SftpTargetTests
         {
             var filePath = Path.Combine(srcDir.FullName, "a.txt");
             await File.WriteAllTextAsync(filePath, "hello sftp download");
-            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length);
+            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
 
             await using var target = new SftpTarget(NewTestConfig());
             await target.UploadAsync(file, progress: null, CancellationToken.None);

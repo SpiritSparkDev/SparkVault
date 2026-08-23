@@ -67,6 +67,6 @@ public sealed class BackupRun
     public string? ErrorMessage { get; set; }
 }
 
-public sealed record BackupFile(string FullPath, string RelativePath, long Size);
+public sealed record BackupFile(string FullPath, string RelativePath, long Size, DateTime LastWriteTimeUtc);
 
 public sealed record RunFileRecord(string RelativePath, long Size);

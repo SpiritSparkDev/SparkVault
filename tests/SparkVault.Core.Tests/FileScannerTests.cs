@@ -22,6 +22,8 @@ public class FileScannerTests
             Assert.Contains(result, f => f.RelativePath == "keep.txt" && f.Size == 5);
             Assert.Contains(result, f => f.RelativePath == Path.Combine("sub", "nested.txt"));
             Assert.DoesNotContain(result, f => f.RelativePath == "skip.tmp");
+            var keepFile = result.Single(f => f.RelativePath == "keep.txt");
+            Assert.True(DateTime.UtcNow - keepFile.LastWriteTimeUtc < TimeSpan.FromMinutes(1));
         }
         finally
         {

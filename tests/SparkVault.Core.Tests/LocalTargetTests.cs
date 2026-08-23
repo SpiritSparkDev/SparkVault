@@ -14,7 +14,7 @@ public class LocalTargetTests
         {
             var filePath = Path.Combine(srcDir.FullName, "a.txt");
             File.WriteAllText(filePath, "hello world");
-            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length);
+            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
 
             var target = new LocalTarget(destDir.FullName);
             await target.UploadAsync(file, progress: null, CancellationToken.None);
@@ -40,7 +40,7 @@ public class LocalTargetTests
         {
             var filePath = Path.Combine(srcDir.FullName, "a.txt");
             File.WriteAllText(filePath, "hello world");
-            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length);
+            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
 
             var target = new LocalTarget(destDir.FullName);
             using var cts = new CancellationTokenSource();
@@ -73,7 +73,7 @@ public class LocalTargetTests
             var data = new byte[64 * 1024 * 1024];
             new Random(42).NextBytes(data);
             await File.WriteAllBytesAsync(filePath, data);
-            var file = new BackupFile(filePath, "big.bin", data.LongLength);
+            var file = new BackupFile(filePath, "big.bin", data.LongLength, new FileInfo(filePath).LastWriteTimeUtc);
 
             var target = new LocalTarget(destDir.FullName);
             using var cts = new CancellationTokenSource();
@@ -137,7 +137,7 @@ public class LocalTargetTests
         {
             var filePath = Path.Combine(srcDir.FullName, "a.txt");
             await File.WriteAllTextAsync(filePath, "hello local download");
-            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length);
+            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
 
             await using var target = new LocalTarget(destDir.FullName);
             await target.UploadAsync(file, progress: null, CancellationToken.None);

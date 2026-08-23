@@ -18,7 +18,8 @@ public static class FileScanner
             if (ExclusionMatcher.IsExcluded(relativePath, patterns))
                 continue;
 
-            result.Add(new BackupFile(fullPath, relativePath, new FileInfo(fullPath).Length));
+            var info = new FileInfo(fullPath);
+            result.Add(new BackupFile(fullPath, relativePath, info.Length, info.LastWriteTimeUtc));
         }
 
         return result;

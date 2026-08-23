@@ -84,7 +84,7 @@ public class S3TargetTests
         {
             var filePath = Path.Combine(srcDir.FullName, "a.txt");
             await File.WriteAllTextAsync(filePath, "hello s3");
-            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length);
+            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
 
             var config = NewTestConfig();
             await CreateBucketAsync(config.Bucket!);
@@ -117,7 +117,7 @@ public class S3TargetTests
             var filePath = Path.Combine(srcDir.FullName, "b.txt");
             await File.WriteAllTextAsync(filePath, "nested");
             // RelativePath uses a Windows-style backslash, exactly what FileScanner produces on Windows.
-            var file = new BackupFile(filePath, "sub\\b.txt", new FileInfo(filePath).Length);
+            var file = new BackupFile(filePath, "sub\\b.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
 
             var config = NewTestConfig();
             await CreateBucketAsync(config.Bucket!);
@@ -143,7 +143,7 @@ public class S3TargetTests
         {
             var filePath = Path.Combine(srcDir.FullName, "c.txt");
             await File.WriteAllTextAsync(filePath, "cancel me");
-            var file = new BackupFile(filePath, "c.txt", new FileInfo(filePath).Length);
+            var file = new BackupFile(filePath, "c.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
 
             var config = NewTestConfig();
             await CreateBucketAsync(config.Bucket!);
@@ -203,7 +203,7 @@ public class S3TargetTests
         {
             var filePath = Path.Combine(srcDir.FullName, "a.txt");
             await File.WriteAllTextAsync(filePath, "hello s3 download");
-            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length);
+            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
 
             var config = NewTestConfig();
             await CreateBucketAsync(config.Bucket!);

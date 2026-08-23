@@ -34,7 +34,7 @@ public class FtpTargetTests
         {
             var filePath = Path.Combine(srcDir.FullName, "a.txt");
             await File.WriteAllTextAsync(filePath, "hello ftp");
-            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length);
+            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
 
             await using var target = new FtpTarget(NewTestConfig());
 
@@ -68,7 +68,7 @@ public class FtpTargetTests
         {
             var filePath = Path.Combine(srcDir.FullName, ".gitignore");
             await File.WriteAllTextAsync(filePath, "bin/\nobj/\n");
-            var file = new BackupFile(filePath, ".gitignore", new FileInfo(filePath).Length);
+            var file = new BackupFile(filePath, ".gitignore", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
 
             await using var target = new FtpTarget(NewTestConfig());
             await target.UploadAsync(file, progress: null, CancellationToken.None);
@@ -90,7 +90,7 @@ public class FtpTargetTests
             var filePath = Path.Combine(srcDir.FullName, "b.txt");
             await File.WriteAllTextAsync(filePath, "nested");
             // RelativePath uses a Windows-style backslash, exactly what FileScanner produces on Windows.
-            var file = new BackupFile(filePath, "sub\\b.txt", new FileInfo(filePath).Length);
+            var file = new BackupFile(filePath, "sub\\b.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
 
             await using var target = new FtpTarget(NewTestConfig());
             await target.UploadAsync(file, progress: null, CancellationToken.None);
@@ -114,7 +114,7 @@ public class FtpTargetTests
         {
             var filePath = Path.Combine(srcDir.FullName, "c.txt");
             await File.WriteAllTextAsync(filePath, "cancel me");
-            var file = new BackupFile(filePath, "c.txt", new FileInfo(filePath).Length);
+            var file = new BackupFile(filePath, "c.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
 
             await using var target = new FtpTarget(NewTestConfig());
             using var cts = new CancellationTokenSource();
@@ -156,7 +156,7 @@ public class FtpTargetTests
         {
             var filePath = Path.Combine(srcDir.FullName, "a.txt");
             await File.WriteAllTextAsync(filePath, "hello ftp download");
-            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length);
+            var file = new BackupFile(filePath, "a.txt", new FileInfo(filePath).Length, new FileInfo(filePath).LastWriteTimeUtc);
 
             await using var target = new FtpTarget(NewTestConfig());
             await target.UploadAsync(file, progress: null, CancellationToken.None);
