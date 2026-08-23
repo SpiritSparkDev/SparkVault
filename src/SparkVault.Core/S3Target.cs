@@ -100,6 +100,19 @@ public sealed class S3Target : IBackupTarget
         }
     }
 
+    public async Task DownloadAsync(string remotePath, string localDestinationPath, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await EnsureBucketAsync(ct);
+
+        var key = RemoteKey(remotePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(localDestinationPath)!);
+
+        using var response = await _client.GetObjectAsync(new GetObjectRequest { BucketName = _bucket, Key = key }, ct);
+        await using var dest = File.Create(localDestinationPath);
+        await response.ResponseStream.CopyToAsync(dest, ct);
+    }
+
     public async Task<IEnumerable<RemoteFileInfo>> ListExistingAsync(CancellationToken ct)
     {
         await EnsureBucketAsync(ct);
