@@ -184,6 +184,20 @@ public partial class MainWindow : Window
 
     private void AddJobButton_Click(object sender, RoutedEventArgs e) => StartNewJobDraft();
 
+    private void AppSettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        new AppSettingsWindow { Owner = this }.ShowDialog();
+    }
+
+    // Re-snapshots brushes that were captured via FindResource(...) rather than a live
+    // DynamicResource binding (JobRow.StatusBrush, ProgressRing.RingBrush), so a Farbschema
+    // switch repaints them too instead of only the XAML-declared colors.
+    public void RefreshTheme()
+    {
+        ReloadJobs();
+        RefreshCurrentTab();
+    }
+
     private void DeleteJobButton_Click(object sender, RoutedEventArgs e)
     {
         var job = CurrentJob;

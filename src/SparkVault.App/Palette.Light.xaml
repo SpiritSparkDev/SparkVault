@@ -1,0 +1,42 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Geistesfunke light palette: same purple/gold brand accents, on a white/lavender-white
+         ground instead of near-black. Same key names as Palette.Dark.xaml. -->
+    <Color x:Key="AccentColor">#8A2BE2</Color>
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
+    <SolidColorBrush x:Key="Accent100Brush" Color="#F3EAFB"/>
+    <SolidColorBrush x:Key="Accent200Brush" Color="#E9D6F7"/>
+    <SolidColorBrush x:Key="Accent300Brush" Color="#C3B3D9"/>
+    <SolidColorBrush x:Key="Accent600Brush" Color="#D6336C"/>
+    <SolidColorBrush x:Key="Accent700Brush" Color="#7C22D6"/>
+    <SolidColorBrush x:Key="Accent800Brush" Color="#4B1D77"/>
+    <SolidColorBrush x:Key="Accent900Brush" Color="#2A0F42"/>
+    <SolidColorBrush x:Key="Accent2Brush" Color="#FFD700"/>
+    <SolidColorBrush x:Key="Accent2_100Brush" Color="#FFE066"/>
+    <SolidColorBrush x:Key="Accent2_800Brush" Color="#17100A"/>
+
+    <SolidColorBrush x:Key="BgBrush" Color="#F5F1FA"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="TextBrush" Color="#1A0F26"/>
+    <SolidColorBrush x:Key="MutedTextBrush" Color="#6B5B7D"/>
+    <SolidColorBrush x:Key="DividerBrush" Color="#E3DCF0"/>
+
+    <LinearGradientBrush x:Key="WindowBackgroundBrush" StartPoint="0,0" EndPoint="0.6,1">
+        <GradientStop Color="#FFFFFF" Offset="0"/>
+        <GradientStop Color="#F3EEFF" Offset="0.75"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="LogoGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#A855F7" Offset="0"/>
+        <GradientStop Color="#8A2BE2" Offset="0.55"/>
+        <GradientStop Color="#FFD700" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- Brand accent, not a neutral surface token — stays identical in both palettes. -->
+    <LinearGradientBrush x:Key="RingGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#A855F7" Offset="0"/>
+        <GradientStop Color="#FFD700" Offset="1"/>
+    </LinearGradientBrush>
+
+</ResourceDictionary>

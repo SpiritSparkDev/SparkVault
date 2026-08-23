@@ -5,6 +5,9 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <!-- Placeholder default; App.xaml.cs replaces this with the correct palette
+                     (per the saved Farbschema setting) before any window is constructed. -->
+                <ResourceDictionary Source="Palette.Dark.xaml"/>
                 <ResourceDictionary Source="Theme.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>

@@ -3,16 +3,31 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:SparkVault.App"
         Title="Geistes Funke" Height="680" Width="980"
-        Background="{StaticResource WindowBackgroundBrush}" FontFamily="{StaticResource BodyFont}"
+        Background="{DynamicResource WindowBackgroundBrush}" FontFamily="{StaticResource BodyFont}"
         Icon="pack://application:,,,/Assets/icon.ico"
         Closing="Window_Closing">
     <DockPanel>
         <!-- Sidebar: job switcher on top, the selected job's tab nav below it -->
-        <StackPanel DockPanel.Dock="Left" Width="240" Background="{StaticResource SurfaceBrush}">
-            <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0">
+        <StackPanel DockPanel.Dock="Left" Width="240" Background="{DynamicResource SurfaceBrush}">
+            <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,0">
                 <StackPanel>
-                    <Button x:Name="AddJobButton" Content="+ Neuer Job" Style="{StaticResource SecondaryButtonStyle}"
-                            Margin="12,12,12,8" Click="AddJobButton_Click"/>
+                    <DockPanel Margin="12,12,12,8">
+                        <Button x:Name="AppSettingsButton" Width="34" Padding="0" DockPanel.Dock="Right" Margin="8,0,0,0"
+                                Style="{StaticResource SecondaryButtonStyle}" ToolTip="Einstellungen" Click="AppSettingsButton_Click">
+                            <Viewbox Width="15" Height="15">
+                                <Canvas Width="24" Height="24">
+                                    <Line X1="3" Y1="6" X2="21" Y2="6" Stroke="{DynamicResource TextBrush}" StrokeThickness="2"/>
+                                    <Line X1="3" Y1="12" X2="21" Y2="12" Stroke="{DynamicResource TextBrush}" StrokeThickness="2"/>
+                                    <Line X1="3" Y1="18" X2="21" Y2="18" Stroke="{DynamicResource TextBrush}" StrokeThickness="2"/>
+                                    <Ellipse Canvas.Left="5" Canvas.Top="3" Width="6" Height="6" Fill="{DynamicResource Accent2Brush}"/>
+                                    <Ellipse Canvas.Left="13" Canvas.Top="9" Width="6" Height="6" Fill="{DynamicResource Accent2Brush}"/>
+                                    <Ellipse Canvas.Left="9" Canvas.Top="15" Width="6" Height="6" Fill="{DynamicResource Accent2Brush}"/>
+                                </Canvas>
+                            </Viewbox>
+                        </Button>
+                        <Button x:Name="AddJobButton" Content="+ Neuer Job" Style="{StaticResource SecondaryButtonStyle}"
+                                Click="AddJobButton_Click"/>
+                    </DockPanel>
 
                     <ListBox x:Name="JobsList" BorderThickness="0" Background="Transparent" MaxHeight="240"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -30,10 +45,10 @@
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsSelected" Value="True">
-                                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource Accent100Brush}"/>
+                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Accent100Brush}"/>
                                                 </Trigger>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource Accent100Brush}"/>
+                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Accent100Brush}"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
@@ -55,7 +70,7 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" Margin="12,8"/>
+                    <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0" Margin="12,8"/>
 
                     <StackPanel x:Name="SidebarNavPanel">
                         <RadioButton x:Name="NavOverview" Content="Übersicht" GroupName="Nav"

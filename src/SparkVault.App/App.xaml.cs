@@ -37,6 +37,21 @@ public partial class App : Application
         Directory.CreateDirectory(appDataDir);
         _welcomeMarkerPath = Path.Combine(appDataDir, ".welcome-shown");
 
+        ThemeManager.Initialize(appDataDir);
+        ThemeManager.Apply(ThemeManager.CurrentMode);
+        // Live-track OS theme changes while "System" is selected, so the app follows Windows'
+        // light/dark switch without needing a restart.
+        Microsoft.Win32.SystemEvents.UserPreferenceChanged += (_, args) =>
+        {
+            if (args.Category != Microsoft.Win32.UserPreferenceCategory.General || ThemeManager.CurrentMode != ThemeMode.System)
+                return;
+            Dispatcher.BeginInvoke(() =>
+            {
+                ThemeManager.Apply(ThemeMode.System);
+                _mainWindowInstance?.RefreshTheme();
+            });
+        };
+
         Log.Logger = new LoggerConfiguration()
             .WriteTo.File(Path.Combine(appDataDir, "log.txt"), rollingInterval: RollingInterval.Day)
             .CreateLogger();
