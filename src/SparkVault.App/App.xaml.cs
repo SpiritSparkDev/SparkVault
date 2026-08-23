@@ -76,7 +76,7 @@ public partial class App : Application
 
         _trayIcon = new NotifyIcon
         {
-            Icon = System.Drawing.SystemIcons.Application,
+            Icon = AppTrayIcon,
             Visible = true,
             Text = "SparkVault - bereit",
         };
@@ -144,23 +144,42 @@ public partial class App : Application
 
         if (running)
         {
-            _trayIcon.Icon = System.Drawing.SystemIcons.Application;
+            _trayIcon.Icon = AppTrayIcon;
             _trayIcon.Text = Truncate($"SparkVault - sichert \"{jobName}\"...");
         }
         else if (status == RunStatus.Failed)
         {
+            // Warning stays a system icon on purpose: a scan of the tray for problems benefits
+            // from a universally recognizable shape more than from brand consistency here.
             _trayIcon.Icon = System.Drawing.SystemIcons.Warning;
             _trayIcon.Text = Truncate($"SparkVault - Fehler bei \"{jobName}\"");
             _trayIcon.ShowBalloonTip(5000, "SparkVault", $"Sicherung von \"{jobName}\" fehlgeschlagen.", ToolTipIcon.Warning);
         }
         else
         {
-            _trayIcon.Icon = System.Drawing.SystemIcons.Application;
+            _trayIcon.Icon = AppTrayIcon;
             _trayIcon.Text = "SparkVault - bereit";
         }
     }
 
     private static string Truncate(string text) => text.Length <= 63 ? text : text[..63];
+
+    // The app's own logo (baked into the exe via <ApplicationIcon>), not the generic Windows
+    // "Application" icon the tray previously fell back to.
+    private static readonly System.Drawing.Icon AppTrayIcon = LoadAppTrayIcon();
+
+    private static System.Drawing.Icon LoadAppTrayIcon()
+    {
+        try
+        {
+            var exePath = Environment.ProcessPath ?? System.Reflection.Assembly.GetExecutingAssembly().Location;
+            return System.Drawing.Icon.ExtractAssociatedIcon(exePath) ?? System.Drawing.SystemIcons.Application;
+        }
+        catch
+        {
+            return System.Drawing.SystemIcons.Application;
+        }
+    }
 
     // First-ever launch (no jobs yet, welcome never shown before): greet the user and hand off
     // to job creation instead of dropping them on an empty hero-card list with no explanation.
