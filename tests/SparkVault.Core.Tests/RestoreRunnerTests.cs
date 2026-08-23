@@ -284,4 +284,62 @@ public class RestoreRunnerTests
             if (File.Exists(dbPath)) File.Delete(dbPath);
         }
     }
+
+    [Fact]
+    public async Task RestoreAsync_TwoQuarantineGenerations_RestoresTheCopyBelongingToTheRestoredRun()
+    {
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-restore-src-");
+        var destDir = Directory.CreateTempSubdirectory("sparkvault-restore-dest-");
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            var filePath = Path.Combine(srcDir.FullName, "a.txt");
+            File.WriteAllText(filePath, "generation one");
+
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var jobRepo = new JobRepository(connectionString);
+            var jobId = jobRepo.Add(new BackupJob
+            {
+                Name = "Test",
+                SourcePath = srcDir.FullName,
+                Targets = new List<BackupTarget> { new() { Type = TargetType.Local, DestinationPath = destDir.FullName } },
+            });
+            var job = jobRepo.GetById(jobId)!;
+            var targetConfig = job.Targets[0];
+
+            var runRepo = new RunRepository(connectionString);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var backupRunner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
+
+            // Run 1 backs up generation one, run 2 quarantines it.
+            var firstResults = await backupRunner.RunAsync(job, progress: null, CancellationToken.None);
+            var firstRunId = firstResults[0].Id;
+            File.Delete(filePath);
+            await backupRunner.RunAsync(job, progress: null, CancellationToken.None);
+
+            // The quarantine folder is named after the run's start second, so the second
+            // generation needs a later second to land in its own folder rather than overwrite
+            // the first one — exactly as it would in real, human-paced usage.
+            await Task.Delay(1100);
+
+            // The same path comes back with different content: run 3 backs it up, run 4
+            // quarantines it again. Restoring run 1 must still yield generation one.
+            File.WriteAllText(filePath, "generation two");
+            await backupRunner.RunAsync(job, progress: null, CancellationToken.None);
+            File.Delete(filePath);
+            await backupRunner.RunAsync(job, progress: null, CancellationToken.None);
+
+            var restoreRunner = new RestoreRunner(runFileRepo, quarantineRepo, new SemaphoreSlim(1, 1), Log.Logger);
+            await restoreRunner.RestoreAsync(job, targetConfig, firstRunId, progress: null, CancellationToken.None);
+
+            Assert.Equal("generation one", await File.ReadAllTextAsync(filePath));
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
+            destDir.Delete(recursive: true);
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
 }

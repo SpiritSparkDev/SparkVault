@@ -169,7 +169,7 @@ public class LocalTargetTests
             var target = new LocalTarget(destDir.FullName);
             await target.UploadAsync(file, progress: null, CancellationToken.None);
 
-            await target.MoveAsync("a.txt", "_deleted\\20260824-100000\\a.txt", CancellationToken.None);
+            Assert.True(await target.MoveAsync("a.txt", "_deleted\\20260824-100000\\a.txt", CancellationToken.None));
 
             Assert.False(File.Exists(Path.Combine(destDir.FullName, "a.txt")));
             var movedPath = Path.Combine(destDir.FullName, "_deleted", "20260824-100000", "a.txt");
@@ -179,6 +179,23 @@ public class LocalTargetTests
         finally
         {
             srcDir.Delete(recursive: true);
+            destDir.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task MoveAsync_SourceDoesNotExist_ReturnsFalseAndCreatesNothing()
+    {
+        var destDir = Directory.CreateTempSubdirectory("sparkvault-local-dest-");
+        try
+        {
+            var target = new LocalTarget(destDir.FullName);
+
+            Assert.False(await target.MoveAsync("never-uploaded.txt", "_deleted\\x\\never-uploaded.txt", CancellationToken.None));
+            Assert.False(Directory.Exists(Path.Combine(destDir.FullName, "_deleted")));
+        }
+        finally
+        {
             destDir.Delete(recursive: true);
         }
     }

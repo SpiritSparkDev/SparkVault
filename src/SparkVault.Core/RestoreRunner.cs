@@ -59,7 +59,7 @@ public sealed class RestoreRunner
                     }
                     catch (Exception primaryEx) when (primaryEx is not OperationCanceledException)
                     {
-                        var quarantinePath = _quarantineRepository.GetLatestQuarantinePath(job.Id, targetConfig.Id, file.RelativePath);
+                        var quarantinePath = _quarantineRepository.GetQuarantinePathForRun(job.Id, targetConfig.Id, file.RelativePath, runId);
                         if (quarantinePath is null) throw;
 
                         try

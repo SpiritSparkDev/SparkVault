@@ -11,7 +11,18 @@ public static class OnChangeJobChecker
         JobRepository jobRepository, RunRepository runRepository, RunFileRepository runFileRepository,
         BackupRunner runner, ILogger logger, CancellationToken ct)
     {
-        foreach (var job in jobRepository.GetAll())
+        IReadOnlyList<BackupJob> jobs;
+        try
+        {
+            jobs = jobRepository.GetAll();
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "OnChange-Prüfung: Jobs konnten nicht geladen werden");
+            return;
+        }
+
+        foreach (var job in jobs)
         {
             if (job.ScheduleType != ScheduleType.OnChange || job.Targets.Count == 0) continue;
 

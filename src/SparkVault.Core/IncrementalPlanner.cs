@@ -13,10 +13,13 @@ public static class IncrementalPlanner
 
     public static Plan Compute(IReadOnlyList<BackupFile> currentFiles, IReadOnlyList<ManifestEntry> previousManifest)
     {
-        var previousByPath = previousManifest.ToDictionary(m => m.RelativePath, StringComparer.Ordinal);
+        // Case-insensitive: Windows filesystems are, so a casing-only rename is the same file.
+        // Comparing case-sensitively made it look like a delete plus an upload to the same
+        // physical path — the upload landed first, the quarantine move then carried it off.
+        var previousByPath = previousManifest.ToDictionary(m => m.RelativePath, StringComparer.OrdinalIgnoreCase);
         var toUpload = new List<BackupFile>();
         var unchanged = new List<BackupFile>();
-        var currentPaths = new HashSet<string>(StringComparer.Ordinal);
+        var currentPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var file in currentFiles)
         {

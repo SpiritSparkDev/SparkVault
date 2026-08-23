@@ -84,6 +84,22 @@ public class IncrementalPlannerTests
     }
 
     [Fact]
+    public void Compute_PathDiffersOnlyInCasing_IsUnchanged()
+    {
+        // Windows filesystems are case-insensitive: "a.txt" and "A.TXT" are the same file. Treating
+        // them as a separate upload plus deletion made the run quarantine the file it had just
+        // uploaded to the very same physical path.
+        var current = new[] { new BackupFile(@"C:\a.txt", "sub\\a.txt", 100, T0) };
+        var previous = new[] { new ManifestEntry("SUB\\A.TXT", 100, T0) };
+
+        var plan = IncrementalPlanner.Compute(current, previous);
+
+        Assert.Empty(plan.ToUpload);
+        Assert.Single(plan.Unchanged);
+        Assert.Empty(plan.ToQuarantine);
+    }
+
+    [Fact]
     public void HasChanges_NothingDiffers_ReturnsFalse()
     {
         var current = new[] { new BackupFile(@"C:\a.txt", "a.txt", 100, T0) };

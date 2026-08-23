@@ -17,6 +17,8 @@ public partial class App : Application
     public static BackupRunner Runner { get; private set; } = null!;
 
     private BackgroundScheduler? _scheduler;
+    private CancellationTokenSource? _onChangeCts;
+    private Task? _onChangeTask;
     private NotifyIcon? _trayIcon;
     private bool _welcomeChecked;
     private string _welcomeMarkerPath = null!;
@@ -118,8 +120,9 @@ public partial class App : Application
         if (!File.Exists(_welcomeMarkerPath) && JobRepository.GetAll().Count == 0)
             ShowMainWindow();
 
-        _ = Task.Run(() => OnChangeJobChecker.RunDueJobsAsync(
-            JobRepository, RunRepository, RunFileRepository, Runner, Log.Logger, CancellationToken.None));
+        _onChangeCts = new CancellationTokenSource();
+        _onChangeTask = Task.Run(() => OnChangeJobChecker.RunDueJobsAsync(
+            JobRepository, RunRepository, RunFileRepository, Runner, Log.Logger, _onChangeCts.Token));
     }
 
     private static void EnsureAutostartRegistered()
@@ -218,6 +221,8 @@ public partial class App : Application
     {
         _trayIcon?.Dispose();
         _scheduler?.DisposeAsync().AsTask().Wait();
+        _onChangeCts?.Cancel();
+        try { _onChangeTask?.Wait(TimeSpan.FromSeconds(5)); } catch { /* best effort on shutdown */ }
         Log.CloseAndFlush();
         base.OnExit(e);
     }

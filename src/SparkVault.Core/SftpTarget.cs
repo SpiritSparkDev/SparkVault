@@ -134,19 +134,20 @@ public sealed class SftpTarget : IBackupTarget
         }, ct);
     }
 
-    public async Task MoveAsync(string fromRelativePath, string toRelativePath, CancellationToken ct)
+    public async Task<bool> MoveAsync(string fromRelativePath, string toRelativePath, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         await EnsureConnectedAsync(ct);
         var fromPath = RemotePath(fromRelativePath);
         var toPath = RemotePath(toRelativePath);
-        await Task.Run(() =>
+        return await Task.Run(() =>
         {
-            if (!_client.Exists(fromPath)) return;
+            if (!_client.Exists(fromPath)) return false;
             var remoteDir = toPath[..toPath.LastIndexOf('/')];
             if (remoteDir.Length == 0) remoteDir = "/";
             if (!_client.Exists(remoteDir)) CreateDirectoryRecursive(remoteDir);
             _client.RenameFile(fromPath, toPath, isPosix: true);
+            return true;
         }, ct);
     }
 

@@ -11,5 +11,6 @@ public interface IBackupTarget : IAsyncDisposable
     Task DownloadAsync(string remotePath, string localDestinationPath, CancellationToken ct);
     Task<IEnumerable<RemoteFileInfo>> ListExistingAsync(CancellationToken ct);
     Task DeleteAsync(string remotePath, CancellationToken ct);
-    Task MoveAsync(string fromRelativePath, string toRelativePath, CancellationToken ct);
+    // true if a file was actually moved, false if the source no longer existed (no-op).
+    Task<bool> MoveAsync(string fromRelativePath, string toRelativePath, CancellationToken ct);
 }

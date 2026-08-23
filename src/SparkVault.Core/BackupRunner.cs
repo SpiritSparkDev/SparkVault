@@ -115,8 +115,15 @@ public sealed class BackupRunner
 
             if (job.VerifyTargetBeforeRun)
             {
-                var remotePaths = (await target.ListExistingAsync(ct)).Select(f => f.Path).ToHashSet(StringComparer.Ordinal);
-                previousManifest = previousManifest.Where(m => remotePaths.Contains(m.RelativePath)).ToList();
+                // Remote targets report forward-slash paths, the manifest stores Windows
+                // backslashes — compare on a single normalized form, case-insensitively (same
+                // reasoning as IncrementalPlanner: the source is always a Windows tree).
+                var remotePaths = (await target.ListExistingAsync(ct))
+                    .Select(f => f.Path.Replace('\\', '/'))
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                previousManifest = previousManifest
+                    .Where(m => remotePaths.Contains(m.RelativePath.Replace('\\', '/')))
+                    .ToList();
             }
 
             var plan = IncrementalPlanner.Compute(files, previousManifest);
@@ -143,11 +150,18 @@ public sealed class BackupRunner
                 var quarantinePath = $"_deleted\\{run.StartedAt:yyyyMMdd-HHmmss}\\{entry.RelativePath}";
                 try
                 {
-                    await target.MoveAsync(entry.RelativePath, quarantinePath, ct);
-                    _quarantineRepository.Add(job.Id, targetConfig.Id, entry.RelativePath, quarantinePath, run.Id, DateTime.UtcNow);
-                    quarantinedCount++;
+                    // Only record a quarantine row when a file actually moved: a no-op move (source
+                    // already gone) would otherwise leave a row pointing at a non-existent path,
+                    // shadowing the real, older quarantine copy of the same relative path.
+                    if (await target.MoveAsync(entry.RelativePath, quarantinePath, ct))
+                    {
+                        _quarantineRepository.Add(job.Id, targetConfig.Id, entry.RelativePath, quarantinePath, run.Id, DateTime.UtcNow);
+                        quarantinedCount++;
+                    }
                 }
-                catch (Exception ex)
+                // Cancellation must reach the outer handler that marks the run Cancelled — not be
+                // swallowed here as a per-file quarantine warning.
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     _logger.Warning(ex, "Quarantäne fehlgeschlagen für {Path} ({JobName} -> {Target})",
                         entry.RelativePath, job.Name, targetConfig.Describe());

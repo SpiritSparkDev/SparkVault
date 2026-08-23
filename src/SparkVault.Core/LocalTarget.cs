@@ -85,15 +85,15 @@ public sealed class LocalTarget : IBackupTarget
         return Task.CompletedTask;
     }
 
-    public Task MoveAsync(string fromRelativePath, string toRelativePath, CancellationToken ct)
+    public Task<bool> MoveAsync(string fromRelativePath, string toRelativePath, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         var fromPath = Path.Combine(_destinationRoot, fromRelativePath);
-        if (!File.Exists(fromPath)) return Task.CompletedTask;
+        if (!File.Exists(fromPath)) return Task.FromResult(false);
         var toPath = Path.Combine(_destinationRoot, toRelativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(toPath)!);
         File.Move(fromPath, toPath, overwrite: true);
-        return Task.CompletedTask;
+        return Task.FromResult(true);
     }
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;

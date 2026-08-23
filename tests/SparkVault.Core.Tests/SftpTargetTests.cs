@@ -180,7 +180,7 @@ public class SftpTargetTests
             await using var target = new SftpTarget(NewTestConfig());
             await target.UploadAsync(file, progress: null, CancellationToken.None);
 
-            await target.MoveAsync("a.txt", "_deleted/20260824-100000/a.txt", CancellationToken.None);
+            Assert.True(await target.MoveAsync("a.txt", "_deleted/20260824-100000/a.txt", CancellationToken.None));
 
             var listed = (await target.ListExistingAsync(CancellationToken.None)).ToList();
             Assert.DoesNotContain(listed, f => f.Path == "a.txt");

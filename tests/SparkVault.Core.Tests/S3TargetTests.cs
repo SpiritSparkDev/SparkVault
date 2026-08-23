@@ -241,7 +241,7 @@ public class S3TargetTests
             await using var target = new S3Target(config);
             await target.UploadAsync(file, progress: null, CancellationToken.None);
 
-            await target.MoveAsync("a.txt", "_deleted/20260824-100000/a.txt", CancellationToken.None);
+            Assert.True(await target.MoveAsync("a.txt", "_deleted/20260824-100000/a.txt", CancellationToken.None));
 
             var listed = (await target.ListExistingAsync(CancellationToken.None)).ToList();
             Assert.DoesNotContain(listed, f => f.Path == "a.txt");
@@ -254,7 +254,7 @@ public class S3TargetTests
     }
 
     [Fact]
-    public async Task MoveAsync_SourceKeyDoesNotExist_DoesNotThrow()
+    public async Task MoveAsync_SourceKeyDoesNotExist_ReturnsFalse()
     {
         if (!DockerTestHelper.IsReachable("127.0.0.1", Port)) return;
 
@@ -262,7 +262,8 @@ public class S3TargetTests
         await CreateBucketAsync(config.Bucket!);
         await using var target = new S3Target(config);
 
-        await target.MoveAsync("never-uploaded.txt", "_deleted/x/never-uploaded.txt", CancellationToken.None);
-        // No exception is the assertion — nothing to move is not an error condition.
+        // Nothing to move is not an error condition — it reports "no file moved" instead, so the
+        // caller can skip recording a quarantine row for a file that was never actually moved.
+        Assert.False(await target.MoveAsync("never-uploaded.txt", "_deleted/x/never-uploaded.txt", CancellationToken.None));
     }
 }

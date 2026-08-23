@@ -672,4 +672,67 @@ public class BackupRunnerTests
             if (File.Exists(dbPath)) File.Delete(dbPath);
         }
     }
+
+    [Fact]
+    public async Task RunAsync_VerifyTargetBeforeRunOnSftp_ReUploadsOnlyTheFileMissingOnTheTarget()
+    {
+        const string host = "127.0.0.1";
+        const int port = 2222;
+        if (!DockerTestHelper.IsReachable(host, port)) return;
+
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-verify-src-");
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            File.WriteAllText(Path.Combine(srcDir.FullName, "keep.txt"), "still on the target");
+            File.WriteAllText(Path.Combine(srcDir.FullName, "drift.txt"), "deleted on the target");
+
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var jobRepo = new JobRepository(connectionString);
+            var jobId = jobRepo.Add(new BackupJob
+            {
+                Name = "Test",
+                SourcePath = srcDir.FullName,
+                VerifyTargetBeforeRun = true,
+                Targets = new List<BackupTarget>
+                {
+                    new()
+                    {
+                        Type = TargetType.Sftp, Host = host, Port = port, Username = "testuser",
+                        EncryptedPassword = CredentialProtector.Protect("testpass"),
+                        RemotePath = $"/upload/verify-{Guid.NewGuid():N}",
+                    },
+                },
+            });
+            var job = jobRepo.GetById(jobId)!;
+            var targetConfig = job.Targets[0];
+
+            var runRepo = new RunRepository(connectionString);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
+
+            await runner.RunAsync(job, progress: null, CancellationToken.None);
+
+            // External drift: one file disappears from the target behind the app's back. SFTP
+            // reports its paths with forward slashes while the manifest stores backslashes — if
+            // the verification filter doesn't normalize both sides it discards the whole manifest
+            // and re-uploads everything, including the file that is still perfectly fine.
+            await using (var sftp = new SftpTarget(targetConfig))
+            {
+                await sftp.DeleteAsync("Test\\drift.txt", CancellationToken.None);
+            }
+
+            var secondResults = await runner.RunAsync(job, progress: null, CancellationToken.None);
+
+            Assert.Equal(1, secondResults[0].FileCount);
+            Assert.Equal("deleted on the target".Length, secondResults[0].TotalBytes);
+            Assert.Equal(2, runFileRepo.GetByRunId(secondResults[0].Id).Count);
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
 }
