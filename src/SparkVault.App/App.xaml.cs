@@ -58,6 +58,7 @@ public partial class App : Application
         Log.Logger = new LoggerConfiguration()
             .WriteTo.File(Path.Combine(appDataDir, "log.txt"), rollingInterval: RollingInterval.Day)
             .CreateLogger();
+        Log.Information("SparkVault gestartet (PID {ProcessId})", Environment.ProcessId);
 
         EnsureAutostartRegistered();
 
@@ -219,6 +220,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        Log.Information("SparkVault wird beendet (ExitCode={ExitCode})", e.ApplicationExitCode);
         _trayIcon?.Dispose();
         _scheduler?.DisposeAsync().AsTask().Wait();
         _onChangeCts?.Cancel();

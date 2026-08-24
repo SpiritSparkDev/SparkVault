@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using Serilog;
 
 namespace SparkVault.Core;
 
@@ -33,6 +34,9 @@ public sealed class JobRepository
             target.JobId = job.Id;
             target.Id = _targetRepository.Add(target);
         }
+
+        Log.Information("Job angelegt: Id={JobId}, Name={JobName}, Quellpfad={SourcePath}, Ziele={TargetCount}",
+            job.Id, job.Name, job.SourcePath, job.Targets.Count);
 
         return job.Id;
     }
@@ -69,10 +73,15 @@ public sealed class JobRepository
             else
                 _targetRepository.Update(target);
         }
+
+        Log.Information("Job aktualisiert: Id={JobId}, Name={JobName}, Quellpfad={SourcePath}, Ziele={TargetCount}",
+            job.Id, job.Name, job.SourcePath, job.Targets.Count);
     }
 
     public void Delete(int id)
     {
+        var name = GetById(id)?.Name;
+
         foreach (var target in _targetRepository.GetByJobId(id))
             _targetRepository.Delete(target.Id);
 
@@ -82,6 +91,8 @@ public sealed class JobRepository
         command.CommandText = "DELETE FROM Jobs WHERE Id = $id;";
         command.Parameters.AddWithValue("$id", id);
         command.ExecuteNonQuery();
+
+        Log.Information("Job gelöscht: Id={JobId}, Name={JobName}", id, name ?? "(unbekannt)");
     }
 
     public BackupJob? GetById(int id)

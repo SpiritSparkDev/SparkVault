@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.IO;
 using System.Windows;
 
 namespace SparkVault.App;
@@ -29,6 +31,12 @@ public partial class AppSettingsWindow : Window
 
         ThemeManager.Apply(mode);
         (Owner as MainWindow)?.RefreshTheme();
+    }
+
+    private void OpenLogs_Click(object sender, RoutedEventArgs e)
+    {
+        var appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SparkVault");
+        Process.Start(new ProcessStartInfo(appDataDir) { UseShellExecute = true });
     }
 
     private void Close_Click(object sender, RoutedEventArgs e)

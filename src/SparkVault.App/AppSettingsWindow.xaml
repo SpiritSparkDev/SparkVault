@@ -1,7 +1,7 @@
 <Window x:Class="SparkVault.App.AppSettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Einstellungen" Height="260" Width="360" WindowStartupLocation="CenterOwner"
+        Title="Einstellungen" Height="310" Width="360" WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Background="{DynamicResource WindowBackgroundBrush}" Foreground="{DynamicResource TextBrush}" FontFamily="{StaticResource BodyFont}"
         Icon="pack://application:,,,/Assets/icon.ico">
@@ -15,6 +15,10 @@
                      Margin="0,0,0,8" Checked="ThemeOption_Checked"/>
         <RadioButton x:Name="SystemOption" Content="System" GroupName="Theme" Foreground="{DynamicResource TextBrush}"
                      Margin="0,0,0,8" Checked="ThemeOption_Checked"/>
+
+        <TextBlock Text="Diagnose" FontWeight="SemiBold" Margin="0,12,0,8"/>
+        <Button Content="Logs öffnen" Style="{StaticResource SecondaryButtonStyle}"
+                HorizontalAlignment="Left" Click="OpenLogs_Click"/>
 
         <Button Content="Schließen" Style="{StaticResource SecondaryButtonStyle}"
                 HorizontalAlignment="Left" Margin="0,16,0,0" Click="Close_Click"/>

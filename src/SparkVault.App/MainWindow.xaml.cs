@@ -47,6 +47,7 @@ public partial class MainWindow : Window
     private bool _suppressJobsListSelection;
     private CancellationTokenSource? _runCts;
     private PauseToken? _pauseToken;
+    private int _filesLoadGeneration;
     private DateTime _speedSampleAt;
     private long _speedSampleBytes;
     private CancellationTokenSource? _restoreCts;
@@ -287,31 +288,65 @@ public partial class MainWindow : Window
             return;
         }
 
-        var rows = new List<FolderRow>();
+        var generation = ++_filesLoadGeneration;
+        var jobId = job.Id;
+
+        // Folder names/checkboxes appear immediately — a single-level directory listing is cheap
+        // even for huge trees. Each folder's total size needs a full recursive scan, which can
+        // take a long time on a large source tree (this used to block the UI thread outright, so
+        // "click Dateiauswahl" looked like a crash for a job with hundreds of thousands of
+        // files) — that part runs off the UI thread and only applies once nothing newer has
+        // superseded this load (job switched, tab reloaded again).
+        var placeholderRows = new List<FolderRow>();
         foreach (var dir in Directory.EnumerateDirectories(job.SourcePath))
         {
             var name = Path.GetFileName(dir);
-            long size;
-            try
-            {
-                size = FileScanner.Scan(dir, Enumerable.Empty<string>()).Sum(f => f.Size);
-            }
-            catch (UnauthorizedAccessException)
-            {
-                size = 0;
-            }
-
-            rows.Add(new FolderRow
+            placeholderRows.Add(new FolderRow
             {
                 Name = name,
                 FullPath = dir,
-                Size = size,
+                Size = 0,
                 IsIncluded = !job.ExcludePatterns.Contains(ExcludeAllPattern(name), StringComparer.OrdinalIgnoreCase),
             });
         }
 
-        FoldersListBox.ItemsSource = rows;
-        FilesSelectedSizeText.Text = $"{FormatBytes(rows.Where(r => r.IsIncluded).Sum(r => r.Size))} ausgewählt";
+        FoldersListBox.ItemsSource = placeholderRows;
+        FilesSelectedSizeText.Text = "Größe wird berechnet...";
+
+        Task.Run(() =>
+        {
+            var sizes = new Dictionary<string, long>();
+            foreach (var row in placeholderRows)
+            {
+                try
+                {
+                    sizes[row.FullPath] = FileScanner.Scan(row.FullPath, Enumerable.Empty<string>()).Sum(f => f.Size);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    sizes[row.FullPath] = 0;
+                }
+            }
+
+            Dispatcher.BeginInvoke(() =>
+            {
+                // IsIncluded is read here, not inside the background loop above: the checkbox
+                // binding mutates it in place on the UI thread, so reading it here (also the UI
+                // thread) picks up any toggle the user made while the scan was still running.
+                if (generation != _filesLoadGeneration || CurrentJob?.Id != jobId) return;
+
+                var rows = placeholderRows.Select(row => new FolderRow
+                {
+                    Name = row.Name,
+                    FullPath = row.FullPath,
+                    Size = sizes.GetValueOrDefault(row.FullPath),
+                    IsIncluded = row.IsIncluded,
+                }).ToList();
+
+                FoldersListBox.ItemsSource = rows;
+                FilesSelectedSizeText.Text = $"{FormatBytes(rows.Where(r => r.IsIncluded).Sum(r => r.Size))} ausgewählt";
+            });
+        });
     }
 
     private void FolderCheckBox_Changed(object sender, RoutedEventArgs e)
