@@ -68,4 +68,74 @@ public class QuarantineRepositoryTests
             if (File.Exists(dbPath)) File.Delete(dbPath);
         }
     }
+
+    [Fact]
+    public void GetExpiredEntries_ReturnsOnlyEntriesOlderThanCutoff()
+    {
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var repo = new QuarantineRepository(connectionString);
+
+            repo.Add(1, 1, "Test\\old.txt", "_deleted\\old\\Test\\old.txt", 5, DateTime.UtcNow.AddDays(-40));
+            repo.Add(1, 1, "Test\\new.txt", "_deleted\\new\\Test\\new.txt", 6, DateTime.UtcNow.AddDays(-1));
+
+            var expired = repo.GetExpiredEntries(1, 1, DateTime.UtcNow.AddDays(-30));
+
+            var entry = Assert.Single(expired);
+            Assert.Equal("_deleted\\old\\Test\\old.txt", entry.QuarantinePath);
+        }
+        finally
+        {
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
+
+    [Fact]
+    public void GetExpiredEntries_ScopedToJobAndTarget()
+    {
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var repo = new QuarantineRepository(connectionString);
+
+            repo.Add(1, 1, "Test\\a.txt", "_deleted\\a\\Test\\a.txt", 5, DateTime.UtcNow.AddDays(-40));
+            repo.Add(2, 1, "Test\\b.txt", "_deleted\\b\\Test\\b.txt", 6, DateTime.UtcNow.AddDays(-40));
+
+            var expired = repo.GetExpiredEntries(1, 1, DateTime.UtcNow.AddDays(-30));
+
+            var entry = Assert.Single(expired);
+            Assert.Equal("_deleted\\a\\Test\\a.txt", entry.QuarantinePath);
+        }
+        finally
+        {
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
+
+    [Fact]
+    public void Delete_RemovesTheEntry()
+    {
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var repo = new QuarantineRepository(connectionString);
+
+            repo.Add(1, 1, "Test\\a.txt", "_deleted\\a\\Test\\a.txt", 5, DateTime.UtcNow.AddDays(-40));
+            var expired = repo.GetExpiredEntries(1, 1, DateTime.UtcNow.AddDays(-30));
+            var entryId = Assert.Single(expired).Id;
+
+            repo.Delete(entryId);
+
+            Assert.Empty(repo.GetExpiredEntries(1, 1, DateTime.UtcNow.AddDays(-30)));
+            Assert.Null(repo.GetLatestQuarantinePath(1, 1, "Test\\a.txt"));
+        }
+        finally
+        {
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
 }

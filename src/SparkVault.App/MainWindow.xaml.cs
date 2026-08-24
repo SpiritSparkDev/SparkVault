@@ -606,6 +606,7 @@ public partial class MainWindow : Window
             SettingsWeeklyDayCombo.SelectedIndex = job.WeeklyDay is { } weeklyDay ? DayOfWeekToComboIndex(weeklyDay) : -1;
             SettingsMonthlyDayBox.Text = job.MonthlyDay?.ToString() ?? "";
             SettingsVerifyTargetCheckBox.IsChecked = job.VerifyTargetBeforeRun;
+            SettingsRetentionDaysBox.Text = job.RetentionDays?.ToString() ?? "";
         }
         else
         {
@@ -620,6 +621,7 @@ public partial class MainWindow : Window
             SettingsWeeklyDayCombo.SelectedIndex = -1;
             SettingsMonthlyDayBox.Text = "";
             SettingsVerifyTargetCheckBox.IsChecked = false;
+            SettingsRetentionDaysBox.Text = "";
         }
     }
 
@@ -771,6 +773,18 @@ public partial class MainWindow : Window
             monthlyDay = day;
         }
 
+        int? retentionDays = null;
+        if (!string.IsNullOrWhiteSpace(SettingsRetentionDaysBox.Text))
+        {
+            if (!int.TryParse(SettingsRetentionDaysBox.Text, out var days) || days <= 0)
+            {
+                System.Windows.MessageBox.Show(this, "Bitte eine positive Anzahl Tage angeben, oder das Feld leer lassen.", "SparkVault",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+            retentionDays = days;
+        }
+
         var job = new BackupJob
         {
             Id = _jobId ?? 0,
@@ -785,6 +799,7 @@ public partial class MainWindow : Window
             WeeklyDay = weeklyDay,
             MonthlyDay = monthlyDay,
             VerifyTargetBeforeRun = SettingsVerifyTargetCheckBox.IsChecked == true,
+            RetentionDays = retentionDays,
             Targets = _settingsTargets.Select(t => t.Target).ToList(),
         };
 

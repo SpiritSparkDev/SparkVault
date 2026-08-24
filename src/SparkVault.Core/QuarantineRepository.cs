@@ -75,4 +75,41 @@ public sealed class QuarantineRepository
         var result = command.ExecuteScalar();
         return result as string;
     }
+
+    // Quarantine entries for a job/target older than the cutoff — the retention sweep's input:
+    // these are candidates for permanent deletion from the target, not just from this table.
+    public List<(int Id, string QuarantinePath)> GetExpiredEntries(int jobId, int targetId, DateTime olderThanUtc)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT Id, QuarantinePath FROM QuarantinedFiles
+            WHERE JobId = $jobId AND TargetId = $targetId AND QuarantinedAtUtc < $olderThanUtc;
+            """;
+        command.Parameters.AddWithValue("$jobId", jobId);
+        command.Parameters.AddWithValue("$targetId", targetId);
+        command.Parameters.AddWithValue("$olderThanUtc", olderThanUtc.ToString("O"));
+
+        using var reader = command.ExecuteReader();
+        var results = new List<(int Id, string QuarantinePath)>();
+        while (reader.Read())
+            results.Add((reader.GetInt32(reader.GetOrdinal("Id")), reader.GetString(reader.GetOrdinal("QuarantinePath"))));
+
+        return results;
+    }
+
+    // Removes the tracking row once its file has actually been deleted from the target — call
+    // only after the physical delete succeeds, so a failed delete leaves the row for the next sweep.
+    public void Delete(int id)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM QuarantinedFiles WHERE Id = $id;";
+        command.Parameters.AddWithValue("$id", id);
+        command.ExecuteNonQuery();
+    }
 }

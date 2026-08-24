@@ -24,7 +24,8 @@ public static class SparkVaultDatabase
                 DailyAtTime TEXT NULL,
                 WeeklyDay TEXT NULL,
                 MonthlyDay INTEGER NULL,
-                VerifyTargetBeforeRun INTEGER NOT NULL DEFAULT 0
+                VerifyTargetBeforeRun INTEGER NOT NULL DEFAULT 0,
+                RetentionDays INTEGER NULL
             );
 
             CREATE TABLE IF NOT EXISTS Targets (
@@ -91,6 +92,7 @@ public static class SparkVaultDatabase
         EnsureColumn(connection, "Jobs", "MonthlyDay", "INTEGER NULL");
         EnsureColumn(connection, "RunFiles", "SourceModifiedUtc", "TEXT NULL");
         EnsureColumn(connection, "Jobs", "VerifyTargetBeforeRun", "INTEGER NOT NULL DEFAULT 0");
+        EnsureColumn(connection, "Jobs", "RetentionDays", "INTEGER NULL");
     }
 
     private static void EnsureColumn(SqliteConnection connection, string table, string column, string definition)

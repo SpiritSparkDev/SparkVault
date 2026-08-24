@@ -334,6 +334,9 @@
                     <TextBlock x:Name="SettingsDailyAtLabel" Text="Uhrzeit (HH:mm)" Margin="0,0,0,4"/>
                     <TextBox x:Name="SettingsDailyAtTimeBox" Margin="0,0,0,14"/>
 
+                    <TextBlock Text="Gelöschte Dateien endgültig entfernen nach (Tage, leer = nie)" Margin="0,0,0,4"/>
+                    <TextBox x:Name="SettingsRetentionDaysBox" Margin="0,0,0,14"/>
+
                     <Button x:Name="SettingsSaveButton" Content="Speichern" Style="{StaticResource PrimaryButtonStyle}"
                             HorizontalAlignment="Left" Margin="0,10,0,0" Click="SettingsSave_Click"/>
                 </StackPanel>

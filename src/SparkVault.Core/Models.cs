@@ -49,6 +49,7 @@ public sealed class BackupJob
     public DayOfWeek? WeeklyDay { get; set; }
     public int? MonthlyDay { get; set; } // 1-31; clamped to the last real day for shorter months
     public bool VerifyTargetBeforeRun { get; set; }
+    public int? RetentionDays { get; set; } // null = keep quarantined (deleted-from-source) files forever
     public List<BackupTarget> Targets { get; set; } = new();
 }
 

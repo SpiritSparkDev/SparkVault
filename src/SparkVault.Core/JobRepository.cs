@@ -21,8 +21,8 @@ public sealed class JobRepository
             connection.Open();
             var command = connection.CreateCommand();
             command.CommandText = """
-                INSERT INTO Jobs (Name, SourcePath, ExcludePatterns, ScheduleType, IntervalHours, DailyAtTime, WeeklyDay, MonthlyDay, VerifyTargetBeforeRun)
-                VALUES ($name, $source, $exclude, $scheduleType, $intervalHours, $dailyAtTime, $weeklyDay, $monthlyDay, $verifyTargetBeforeRun);
+                INSERT INTO Jobs (Name, SourcePath, ExcludePatterns, ScheduleType, IntervalHours, DailyAtTime, WeeklyDay, MonthlyDay, VerifyTargetBeforeRun, RetentionDays)
+                VALUES ($name, $source, $exclude, $scheduleType, $intervalHours, $dailyAtTime, $weeklyDay, $monthlyDay, $verifyTargetBeforeRun, $retentionDays);
                 SELECT last_insert_rowid();
                 """;
             BindJobParameters(command, job);
@@ -51,7 +51,8 @@ public sealed class JobRepository
                 UPDATE Jobs
                 SET Name = $name, SourcePath = $source, ExcludePatterns = $exclude,
                     ScheduleType = $scheduleType, IntervalHours = $intervalHours, DailyAtTime = $dailyAtTime,
-                    WeeklyDay = $weeklyDay, MonthlyDay = $monthlyDay, VerifyTargetBeforeRun = $verifyTargetBeforeRun
+                    WeeklyDay = $weeklyDay, MonthlyDay = $monthlyDay, VerifyTargetBeforeRun = $verifyTargetBeforeRun,
+                    RetentionDays = $retentionDays
                 WHERE Id = $id;
                 """;
             BindJobParameters(command, job);
@@ -145,6 +146,7 @@ public sealed class JobRepository
         command.Parameters.AddWithValue("$weeklyDay", (object?)job.WeeklyDay?.ToString() ?? DBNull.Value);
         command.Parameters.AddWithValue("$monthlyDay", (object?)job.MonthlyDay ?? DBNull.Value);
         command.Parameters.AddWithValue("$verifyTargetBeforeRun", job.VerifyTargetBeforeRun ? 1 : 0);
+        command.Parameters.AddWithValue("$retentionDays", (object?)job.RetentionDays ?? DBNull.Value);
     }
 
     private static BackupJob ReadJob(SqliteDataReader reader)
@@ -164,6 +166,7 @@ public sealed class JobRepository
             WeeklyDay = reader.IsDBNull(reader.GetOrdinal("WeeklyDay")) ? null : Enum.Parse<DayOfWeek>(reader.GetString(reader.GetOrdinal("WeeklyDay"))),
             MonthlyDay = reader.IsDBNull(reader.GetOrdinal("MonthlyDay")) ? null : reader.GetInt32(reader.GetOrdinal("MonthlyDay")),
             VerifyTargetBeforeRun = reader.GetInt32(reader.GetOrdinal("VerifyTargetBeforeRun")) != 0,
+            RetentionDays = reader.IsDBNull(reader.GetOrdinal("RetentionDays")) ? null : reader.GetInt32(reader.GetOrdinal("RetentionDays")),
         };
     }
 }

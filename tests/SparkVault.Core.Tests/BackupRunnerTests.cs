@@ -674,6 +674,104 @@ public class BackupRunnerTests
     }
 
     [Fact]
+    public async Task RunAsync_RetentionDaysSet_PurgesQuarantineEntryOlderThanCutoff()
+    {
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-src-");
+        var destDir = Directory.CreateTempSubdirectory("sparkvault-dest-");
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            File.WriteAllText(Path.Combine(srcDir.FullName, "a.txt"), "hello");
+
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var jobRepo = new JobRepository(connectionString);
+            var jobId = jobRepo.Add(new BackupJob
+            {
+                Name = "Test",
+                SourcePath = srcDir.FullName,
+                RetentionDays = 1,
+                Targets = new List<BackupTarget> { new() { Type = TargetType.Local, DestinationPath = destDir.FullName } },
+            });
+            var job = jobRepo.GetById(jobId)!;
+            var targetId = job.Targets[0].Id;
+
+            var runRepo = new RunRepository(connectionString);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
+
+            await runner.RunAsync(job, progress: null, CancellationToken.None);
+
+            // Simulate a file that was quarantined 10 days ago by an earlier run — well past
+            // this job's 1-day retention window — by placing the file directly and registering
+            // it, rather than waiting on real wall-clock time to age an entry.
+            var oldQuarantinePath = "_deleted\\old\\Test\\old.txt";
+            var oldQuarantineFullPath = Path.Combine(destDir.FullName, oldQuarantinePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(oldQuarantineFullPath)!);
+            File.WriteAllText(oldQuarantineFullPath, "old quarantined content");
+            quarantineRepo.Add(jobId, targetId, "Test\\old.txt", oldQuarantinePath, quarantinedAtRunId: 1, quarantinedAtUtc: DateTime.UtcNow.AddDays(-10));
+
+            await runner.RunAsync(job, progress: null, CancellationToken.None);
+
+            Assert.False(File.Exists(oldQuarantineFullPath));
+            Assert.Null(quarantineRepo.GetLatestQuarantinePath(jobId, targetId, "Test\\old.txt"));
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
+            destDir.Delete(recursive: true);
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_RetentionDaysNotSet_LeavesOldQuarantineEntriesUntouched()
+    {
+        var srcDir = Directory.CreateTempSubdirectory("sparkvault-src-");
+        var destDir = Directory.CreateTempSubdirectory("sparkvault-dest-");
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            File.WriteAllText(Path.Combine(srcDir.FullName, "a.txt"), "hello");
+
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var jobRepo = new JobRepository(connectionString);
+            var jobId = jobRepo.Add(new BackupJob
+            {
+                Name = "Test",
+                SourcePath = srcDir.FullName,
+                Targets = new List<BackupTarget> { new() { Type = TargetType.Local, DestinationPath = destDir.FullName } },
+            });
+            var job = jobRepo.GetById(jobId)!;
+            var targetId = job.Targets[0].Id;
+
+            var runRepo = new RunRepository(connectionString);
+            var runFileRepo = new RunFileRepository(connectionString);
+            var quarantineRepo = new QuarantineRepository(connectionString);
+            var runner = new BackupRunner(runRepo, runFileRepo, quarantineRepo, Log.Logger);
+
+            await runner.RunAsync(job, progress: null, CancellationToken.None);
+
+            var oldQuarantinePath = "_deleted\\old\\Test\\old.txt";
+            var oldQuarantineFullPath = Path.Combine(destDir.FullName, oldQuarantinePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(oldQuarantineFullPath)!);
+            File.WriteAllText(oldQuarantineFullPath, "old quarantined content");
+            quarantineRepo.Add(jobId, targetId, "Test\\old.txt", oldQuarantinePath, quarantinedAtRunId: 1, quarantinedAtUtc: DateTime.UtcNow.AddDays(-10));
+
+            await runner.RunAsync(job, progress: null, CancellationToken.None);
+
+            Assert.True(File.Exists(oldQuarantineFullPath));
+            Assert.NotNull(quarantineRepo.GetLatestQuarantinePath(jobId, targetId, "Test\\old.txt"));
+        }
+        finally
+        {
+            srcDir.Delete(recursive: true);
+            destDir.Delete(recursive: true);
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
+
+    [Fact]
     public async Task RunAsync_VerifyTargetBeforeRunOnSftp_ReUploadsOnlyTheFileMissingOnTheTarget()
     {
         const string host = "127.0.0.1";

@@ -86,6 +86,37 @@ public class JobRepositoryTests
     }
 
     [Fact]
+    public void AddThenGetById_RoundTripsRetentionDays()
+    {
+        var connectionString = NewTempDbConnectionString(out var dbPath);
+        try
+        {
+            SparkVaultDatabase.EnsureCreated(connectionString);
+            var repo = new JobRepository(connectionString);
+
+            var id = repo.Add(new BackupJob
+            {
+                Name = "Retained",
+                SourcePath = "C:\\a",
+                RetentionDays = 30,
+                Targets = new List<BackupTarget> { new() { Type = TargetType.Local, DestinationPath = "C:\\a1" } },
+            });
+
+            Assert.Equal(30, repo.GetById(id)!.RetentionDays);
+
+            var job = repo.GetById(id)!;
+            job.RetentionDays = null;
+            repo.Update(job);
+
+            Assert.Null(repo.GetById(id)!.RetentionDays);
+        }
+        finally
+        {
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+        }
+    }
+
+    [Fact]
     public void AddThenGetById_RoundTripsWeeklyAndMonthlySchedule()
     {
         var connectionString = NewTempDbConnectionString(out var dbPath);

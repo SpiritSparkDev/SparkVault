@@ -168,11 +168,33 @@ public sealed class BackupRunner
                 }
             }
 
+            var purgedCount = 0;
+            if (job.RetentionDays is { } retentionDays)
+            {
+                var cutoff = DateTime.UtcNow.AddDays(-retentionDays);
+                foreach (var (quarantineId, quarantinePath) in _quarantineRepository.GetExpiredEntries(job.Id, targetConfig.Id, cutoff))
+                {
+                    try
+                    {
+                        await target.DeleteAsync(quarantinePath, ct);
+                        _quarantineRepository.Delete(quarantineId);
+                        purgedCount++;
+                    }
+                    // Same reasoning as the quarantine loop above: a cancelled run must not be
+                    // reported as a per-file purge warning.
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        _logger.Warning(ex, "Endgültiges Löschen fehlgeschlagen für {Path} ({JobName} -> {Target})",
+                            quarantinePath, job.Name, targetConfig.Describe());
+                    }
+                }
+            }
+
             _runFileRepository.AddRange(run.Id, uploaded);
             run.Status = RunStatus.Success;
             _logger.Information(
-                "Job {JobName} -> {Target} completed: {NewOrChanged} neu/geändert, {Unchanged} unverändert übersprungen, {Quarantined} in Quarantäne, {TotalBytes} Bytes übertragen",
-                job.Name, targetConfig.Describe(), plan.ToUpload.Count, plan.Unchanged.Count, quarantinedCount, bytesDone);
+                "Job {JobName} -> {Target} completed: {NewOrChanged} neu/geändert, {Unchanged} unverändert übersprungen, {Quarantined} in Quarantäne, {Purged} endgültig gelöscht, {TotalBytes} Bytes übertragen",
+                job.Name, targetConfig.Describe(), plan.ToUpload.Count, plan.Unchanged.Count, quarantinedCount, purgedCount, bytesDone);
         }
         catch (OperationCanceledException)
         {
