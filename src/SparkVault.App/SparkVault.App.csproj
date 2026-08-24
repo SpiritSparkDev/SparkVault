@@ -12,6 +12,7 @@
     <Product>SparkVault</Product>
     <AssemblyTitle>SparkVault</AssemblyTitle>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
