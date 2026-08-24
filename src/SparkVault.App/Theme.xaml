@@ -142,6 +142,23 @@
     <!-- Unstyled <Button> in existing XAML falls back to the secondary look -->
     <Style TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}"/>
 
+    <!-- CheckBox and (unstyled) RadioButton: same bug class documented above for TextBlock/
+         AccessText and ComboBoxItem/ListBoxItem — their stock WPF templates don't reliably pick
+         up this app's DynamicResource palette, so a plain <CheckBox Content="..."/> or
+         <RadioButton Content="..."/> with no explicit local Foreground renders illegible
+         dark-on-dark text (this is exactly how "Vor jedem Lauf Ziel-Inhalt prüfen" shipped with
+         an invisible label). A light-touch implicit style — Foreground only, no template
+         rewrite, matching the TextBox/ComboBox precedent below — closes the gap for every future
+         plain instance too, not just this one. RadioButton here only affects instances that
+         DON'T explicitly set Style="{StaticResource SidebarNavStyle}" — an explicit Style
+         assignment always wins over an implicit one, so the sidebar nav items are unaffected. -->
+    <Style TargetType="CheckBox">
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+    </Style>
+    <Style TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+    </Style>
+
     <!-- Sidebar navigation item (rounded pill, gradient fill when active) -->
     <Style x:Key="SidebarNavStyle" TargetType="RadioButton">
         <Setter Property="FontFamily" Value="{StaticResource HeadingFont}"/>
